@@ -550,6 +550,8 @@ Image/Build/Profile/M3=$(call BuildFirmware/Poray4M/$(1),$(1),m3,M3)
 
 Image/Build/Profile/M4=$(call BuildFirmware/PorayDualSize/$(1),$(1),m4,M4)
 
+Image/Build/Profile/R9-NEMOAHN=$(call BuildFirmware/Default8M/$(1),$(1),r9-nemoahn,R9-NEMOAHN)
+
 Image/Build/Profile/MOFI3500-3GN=$(call BuildFirmware/Default8M/$(1),$(1),mofi3500-3gn,MOFI3500-3GN)
 
 # Kernel name should be "Linux Kernel Image" to make the OpenWrt image installable from factory Web UI
@@ -748,6 +750,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/PSR-680W,$(1))
 	$(call Image/Build/Profile/PWH2004,$(1))
 	$(call Image/Build/Profile/PX-4885,$(1))
+	$(call Image/Build/Profile/R9-NEMOAHN,$(1))
 	$(call Image/Build/Profile/RT5350F-OLINUXINO,$(1))
 	$(call Image/Build/Profile/RT5350F-OLINUXINO-EVB,$(1))
 	$(call Image/Build/Profile/RTG32B1,$(1))

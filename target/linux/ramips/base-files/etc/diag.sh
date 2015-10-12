@@ -173,6 +173,9 @@ get_status_led() {
 	wsr-600)
 		status_led="$board:orange:diag"
 		;;
+	r9-nemoahn)
+		status_led="$board::run"
+		;;
 	esac
 }
 

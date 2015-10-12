@@ -82,6 +82,7 @@ platform_check_image() {
 	pbr-m1|\
 	psr-680w|\
 	px-4885|\
+	r9-nemoahn|\
 	re6500|\
 	rp-n53|\
 	rt5350f-olinuxino|\
