@@ -5,7 +5,7 @@ PKG_VERSION:=2015-05-08
 PKG_RELEASE=$(PKG_SOURCE_VERSION)
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git://git.openwrt.org/project/usign.git
+PKG_SOURCE_URL=$(OPENWRT_GIT)/project/usign.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE_VERSION:=cf8dcdb8a4e874c77f3e9a8e9b643e8c17b19131
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
@@ -16,11 +16,13 @@ PKG_USE_MIPS16:=0
 PKG_LICENSE:=ISC
 PKG_LICENSE_FILES:=
 
-PKG_MAINTAINER:=Felix Fietkau <nbd@openwrt.org>
+PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/cmake.mk
+
+HOST_BUILD_PREFIX:=$(STAGING_DIR_HOST)
 
 define Package/usign
   SECTION:=base
