@@ -4,7 +4,7 @@
 
 / {
 	compatible = "r9-nemoahn", "ralink,rt5350-soc";
-	model = "RAONIX R9-NemoAhn";
+	model = "RAONIX R9-NEMOAHN";
 
 	chosen {
 		bootargs = "console=ttyS1,57600";
@@ -103,7 +103,7 @@
 	};
 
 	esw@10110000 {
-		ralink,portmap = <0x17>;
+		mediatek,portmap = <0x17>;
 	};
 
 	wmac@10180000 {

@@ -526,13 +526,11 @@ ramips_board_detect() {
 	*"ZBT-WR8305RT")
 		name="zbt-wr8305rt"
 		;;
-<<<<<<< HEAD
-	*"R9-NemoAhn")
-		name="r9-nemoahn"
-=======
 	*"YK1")
 		name="youku-yk1"
->>>>>>> cac971dad98c83fd25223286330e757218f19e1b
+		;;
+	*"R9-NEMOAHN")
+		name="r9-nemoahn"
 		;;
 	*)
 		name="generic"

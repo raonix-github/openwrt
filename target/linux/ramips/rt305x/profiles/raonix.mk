@@ -5,13 +5,14 @@
 # See /LICENSE for more information.
 #
 
+# 2016.07.01 bygomma : add r9-nemoahn
 define Profile/R9-NEMOAHN
-	NAME:=RAONIX NemoAhn
+	NAME:=RAONIX NEMOAHN
 	PACKAGES:=\
 		kmod-usb2 
 endef
 
 define Profile/R9-NEMOAHN/Description
-	Package set for RAONIX NemoAhn board
+	Package set for RAONIX NEMOAHN board
 endef
 $(eval $(call Profile,R9-NEMOAHN))

@@ -2,6 +2,8 @@
 # RT305X Profiles
 #
 
+# 2016.07.01 bygomma : add r9-nemoahn
+
 # sign an image to make it work with edimax tftp recovery
 define BuildFirmware/Edimax/squashfs
 	$(call BuildFirmware/OF,$(1),$(2),$(3),$(4))
@@ -281,6 +283,7 @@ Image/Build/Profile/MZK-DP150N=$(call BuildFirmware/Default4M/$(1),$(1),mzk-dp15
 Image/Build/Profile/WHRG300N=$(call BuildFirmware/WHRG300N/$(1),$(1))
 Image/Build/Profile/WIZARD8800=$(call BuildFirmware/Default8M/$(1),$(1),wizard-8800,WIZARD8800,Linux Kernel Image)
 Image/Build/Profile/WIZFI630A=$(call BuildFirmware/Default16M/$(1),$(1),wizfi630a,WIZFI630A)
+Image/Build/Profile/R9-NEMOAHN=$(call BuildFirmware/Default8M/$(1),$(1),r9-nemoahn,R9-NEMOAHN)
 Image/Build/Profile/WL-330N=$(call BuildFirmware/Default4M/$(1),$(1),wl-330n,WL-330N)
 Image/Build/Profile/WL-330N3G=$(call BuildFirmware/Default4M/$(1),$(1),wl-330n3g,WL-330N3G)
 Image/Build/Profile/WL-341V3=$(call BuildFirmware/WL-341V3/$(1),$(1))
@@ -376,6 +379,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/WHRG300N,$(1))
 	$(call Image/Build/Profile/WIZARD8800,$(1))
 	$(call Image/Build/Profile/WIZFI630A,$(1))
+	$(call Image/Build/Profile/R9-NEMOAHN,$(1))
 	$(call Image/Build/Profile/WL-330N,$(1))
 	$(call Image/Build/Profile/WL-330N3G,$(1))
 	$(call Image/Build/Profile/WL-341V3,$(1))

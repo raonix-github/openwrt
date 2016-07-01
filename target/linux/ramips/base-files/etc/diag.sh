@@ -193,15 +193,13 @@ get_status_led() {
 	wsr-600)
 		status_led="$board:orange:diag"
 		;;
-<<<<<<< HEAD
-	r9-nemoahn)
-		status_led="$board::run"
-=======
 	wrtnode2r | \
 	wrtnode2p | \
 	wrtnode)
 		status_led="wrtnode:blue:indicator"
->>>>>>> cac971dad98c83fd25223286330e757218f19e1b
+		;;
+	r9-nemoahn)
+		status_led="$board::run"
 		;;
 	esac
 }
