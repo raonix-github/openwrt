@@ -7,7 +7,7 @@
 
 # 2016.07.01 bygomma : add r9-nemoahn
 define Profile/R9-NEMOAHN
-	NAME:=RAONIX NEMOAHN
+	NAME:=RAONIX R9-NEMOAHN
 	PACKAGES:=\
 		kmod-usb2 
 endef

@@ -221,11 +221,14 @@ ramips_setup_interfaces()
 		ucidef_add_switch "switch0" \
 			"0:lan" "1:lan" "2:lan" "3:lan" "4:wan" "6@eth0"
 		;;
+		# bygomma : r9-nemoahn
 	r9-nemoahn)
-		ucidef_set_interfaces_lan_wan "eth0.1" "eth0.2"
-		ucidef_add_switch "switch0" "1" "1"
-		ucidef_add_switch_vlan "switch0" "1" "1 2 6t"
-		ucidef_add_switch_vlan "switch0" "2" "0 6t"
+		ucidef_add_switch "switch0" \
+			"1:lan" "2:lan" "0:wan" "6@eth0"
+#		ucidef_set_interfaces_lan_wan "eth0.1" "eth0.2"
+#		ucidef_add_switch "switch0" "1" "1"
+#		ucidef_add_switch_vlan "switch0" "1" "1 2 6t"
+#		ucidef_add_switch_vlan "switch0" "2" "0 6t"
 		;;
 
 	*)
