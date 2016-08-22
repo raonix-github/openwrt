@@ -57,6 +57,12 @@ CONFIGURE_ARGS+= \
 	--without-lzma \
 	--disable-werror
 
+# 2016.07.12 bygomma : enable python
+#CONFIGURE_ARGS+= \
+#	--with-python=yes
+# 2016.07.12 bygomma : end
+
+#
 CONFIGURE_VARS+= \
 	ac_cv_search_tgetent="$(TARGET_LDFLAGS) -lncurses -lreadline"
 
