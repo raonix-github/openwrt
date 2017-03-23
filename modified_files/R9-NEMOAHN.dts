@@ -155,20 +155,20 @@
 	gpio-leds {
 		compatible = "gpio-leds";
 
-		run-red {
-			label = "r9-nemoahn:red:run";
+		led0-red {
+			label = "led0:red";
 			gpios = <&pca9500 0 0>;
 		};
-		run-green {
-			label = "r9-nemoahn:green:run";
+		led0-green {
+			label = "led0:green";
 			gpios = <&pca9500 1 0>;
 		};
-		pairing-red {
-			label = "r9-nemoahn:red:pairing";
+		led1-red {
+			label = "led1:red";
 			gpios = <&pca9500 2 0>;
 		};
-		pairing-green {
-			label = "r9-nemoahn:green:pairing";
+		led1-green {
+			label = "led1:green";
 			gpios = <&pca9500 3 0>;
 		};
 	};

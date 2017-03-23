@@ -199,11 +199,7 @@ get_status_led() {
 		status_led="wrtnode:blue:indicator"
 		;;
 	r9-nemoahn)
-		if [ "$1" = "upgrade" ]; then
-			status_led="$board:green:run"
-		elif [ "$1" = "pairing" ]; then
-			status_led="$board:green:pairing"
-		fi
+		status_led="$board::run"
 		;;
 	esac
 }
@@ -224,9 +220,6 @@ set_state() {
 		;;
 	done)
 		status_led_on
-		;;
-	pairing)
-		status_led_blink_preinit
 		;;
 	esac
 }

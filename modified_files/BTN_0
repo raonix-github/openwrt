@@ -9,18 +9,17 @@ pressed)
 timeout)
 	. /etc/diag.sh
 	set_state failsafe
-	echo "RESET TIMEOUT" > /dev/console
 ;;
 released)
 	if [ "$SEEN" -lt 1 ]
 	then
-		echo "REBOOT" > /dev/console
+		echo "BTN0" > /dev/console
 		sync
 #		reboot
 	elif [ "$SEEN" -gt 5 ]
 	then
-		echo "FACTORY RESET" > /dev/console
-#		jffs2reset -y && reboot &
+		echo "FACTORY BTN0" > /dev/console
+		jffs2reset -y && reboot &
 	fi
 ;;
 esac
