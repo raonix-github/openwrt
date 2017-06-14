@@ -1,7 +1,22 @@
 #!/bin/sh /etc/rc.common
 # Copyright (C) 2008 OpenWrt.org
 
+
 START=96
+# bygomma : trigger on ntwork
+USE_PROCD=1
+
+service_triggers() {
+	procd_add_interface_trigger "interface.*" "eth0"  echo "############# link"
+}
+
+start_service() {
+	[ -e /sys/class/leds/ ] && {
+		config_load system
+		config_foreach load_led led
+	}
+}
+# bygomma adn
 
 load_led() {
 	local name

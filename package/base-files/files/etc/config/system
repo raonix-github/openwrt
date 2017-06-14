@@ -1,6 +1,6 @@
 config system
 	option hostname	OpenWrt
-	option timezone	UTC
+	option timezone	KST-9
 	option ttylogin	0
 
 config timeserver ntp
@@ -10,3 +10,16 @@ config timeserver ntp
 	list server	3.openwrt.pool.ntp.org
 	option enabled 1
 	option enable_server 0
+
+config led
+	option sysfs		r9-nemoahn:run
+	option trigger		default-on
+	option delayon		1000
+	option delayoff		1000
+
+config led network_led
+	option name			NETWORK
+	option sysfs		r9-nemoahn:network
+	option trigger		netdev
+	option dev			eth0
+	option mode			'link tx rx'

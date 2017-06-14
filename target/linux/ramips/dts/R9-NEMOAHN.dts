@@ -155,21 +155,22 @@
 	gpio-leds {
 		compatible = "gpio-leds";
 
-		run-red {
-			label = "r9-nemoahn:red:run";
-			gpios = <&pca9500 0 0>;
+		run {
+			label = "r9-nemoahn:run";
+			gpios = <&pca9500 0 1>;
+			default-state = "on";
 		};
-		run-green {
-			label = "r9-nemoahn:green:run";
-			gpios = <&pca9500 1 0>;
+		network {
+			label = "r9-nemoahn:network";
+			gpios = <&pca9500 2 1>;
 		};
-		pairing-red {
-			label = "r9-nemoahn:red:pairing";
-			gpios = <&pca9500 2 0>;
+		iot-green {
+			label = "r9-nemoahn:green:iot";
+			gpios = <&pca9500 5 1>;
 		};
-		pairing-green {
-			label = "r9-nemoahn:green:pairing";
-			gpios = <&pca9500 3 0>;
+		iot-red {
+			label = "r9-nemoahn:red:iot";
+			gpios = <&pca9500 6 1>;
 		};
 	};
 };
