@@ -16,3 +16,14 @@ define Profile/R9-NEMOAHN/Description
 	Package set for RAONIX NEMOAHN board
 endef
 $(eval $(call Profile,R9-NEMOAHN))
+
+define Profile/R9-DJ270
+	NAME:=RAONIX R9-DJ270
+	PACKAGES:=\
+		kmod-usb2 
+endef
+
+define Profile/R9-DJ270/Description
+	Package set for RAONIX DJ270 board
+endef
+$(eval $(call Profile,R9-DJ270))

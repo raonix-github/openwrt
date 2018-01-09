@@ -532,6 +532,9 @@ ramips_board_detect() {
 	*"R9-NEMOAHN")
 		name="r9-nemoahn"
 		;;
+	*"R9-DJ270")
+		name="r9-dj270"
+		;;
 	*)
 		name="generic"
 		;;

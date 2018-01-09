@@ -101,6 +101,7 @@ platform_check_image() {
 	psr-680w|\
 	px-4885|\
 	r9-nemoahn|\
+	r9-dj270|\
 	re6500|\
 	rp-n53|\
 	rt5350f-olinuxino|\

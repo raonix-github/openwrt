@@ -201,6 +201,9 @@ get_status_led() {
 	r9-nemoahn)
 		status_led="$board:run"
 		;;
+	r9-dj270)
+		status_led="$board:run"
+		;;
 	esac
 }
 

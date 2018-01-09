@@ -286,6 +286,7 @@ Image/Build/Profile/WIZFI630A=$(call BuildFirmware/Default16M/$(1),$(1),wizfi630
 # 2016.12.29 bygomma : 16M 
 # Image/Build/Profile/R9-NEMOAHN=$(call BuildFirmware/Default8M/$(1),$(1),r9-nemoahn,R9-NEMOAHN)
 Image/Build/Profile/R9-NEMOAHN=$(call BuildFirmware/Default16M/$(1),$(1),r9-nemoahn,R9-NEMOAHN)
+Image/Build/Profile/R9-DJ270=$(call BuildFirmware/Default16M/$(1),$(1),r9-dj270,R9-DJ270)
 # 2016.12.29 bygomma : end
 Image/Build/Profile/WL-330N=$(call BuildFirmware/Default4M/$(1),$(1),wl-330n,WL-330N)
 Image/Build/Profile/WL-330N3G=$(call BuildFirmware/Default4M/$(1),$(1),wl-330n3g,WL-330N3G)
@@ -383,6 +384,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/WIZARD8800,$(1))
 	$(call Image/Build/Profile/WIZFI630A,$(1))
 	$(call Image/Build/Profile/R9-NEMOAHN,$(1))
+	$(call Image/Build/Profile/R9-DJ270,$(1))
 	$(call Image/Build/Profile/WL-330N,$(1))
 	$(call Image/Build/Profile/WL-330N3G,$(1))
 	$(call Image/Build/Profile/WL-341V3,$(1))
