@@ -1,19 +1,10 @@
 /dts-v1/;
 
-#include "rt3050.dtsi"
+#include "WR512-3GN.dtsi"
 
 / {
-	compatible = "WR512-3GN", "ralink,rt3052-soc";
-	model = "WR512-3GN-like router";
-
-	pinctrl {
-		state_default: pinctrl0 {
-			gpio {
-				ralink,group = "spi", "i2c", "jtag", "rgmii", "mdio", "uartf";
-				ralink,function = "gpio";
-			};
-		};
-	};
+	compatible = "unbranded,wr512-3gn-4m", "unbranded,wr512-3gn", "ralink,rt3052-soc";
+	model = "WR512-3GN (4M)";
 
 	cfi@1f000000 {
 		compatible = "cfi-flash";
@@ -45,65 +36,5 @@
 			label = "firmware";
 			reg = <0x50000 0x3c8000>;
 		};
-	};
-
-	esw@10110000 {
-		mediatek,portmap = <0x2f>;
-	};
-
-	wmac@10180000 {
-		ralink,mtd-eeprom = <&factory 0>;
-	};
-
-	gpio-leds {
-		compatible = "gpio-leds";
-
-		3g {
-			label = "wr512-3gn:green:3g";
-			gpios = <&gpio0 9 1>;
-		};
-
-		gateway {
-			label = "wr512-3gn:green:gateway";
-			gpios = <&gpio0 11 1>;
-		};
-
-		ap {
-			label = "wr512-3gn:green:ap";
-			gpios = <&gpio0 12 1>;
-		};
-
-		wps {
-			label = "wr512-3gn:green:wps";
-			gpios = <&gpio0 14 1>;
-		};
-
-		station {
-			label = "wr512-3gn:green:station";
-			gpios = <&gpio0 13 1>;
-		};
-	};
-
-	gpio-keys-polled {
-		compatible = "gpio-keys-polled";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		poll-interval = <20>;
-
-		reset_wps {
-			label = "reset_wps";
-			gpios = <&gpio0 10 1>;
-			linux,code = <0x198>;
-		};
-
-		mode {
-			label = "mode";
-			gpios = <&gpio0 7 1>;
-			linux,code = <0x32>;
-		};
-	};
-
-	otg@101c0000 {
-		status = "okay";
 	};
 };

@@ -9,15 +9,13 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=usbutils
 PKG_VERSION:=007
-PKG_RELEASE:=3
+PKG_RELEASE:=7
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/linux/utils/usb/usbutils
-PKG_MD5SUM:=a6bd63d5c44cebb717a960eae22a3ca9
-
-USB_IDS_VERSION:=2016-03-03
-USB_IDS_MD5SUM:=273596b6ee101b1df454827cfa87dff8
-USB_IDS_FILE:=usb.ids
+PKG_HASH:=7593a01724bbc0fd9fe48e62bc721ceb61c76654f1d7b231b3c65f6dfbbaefa4
+PKG_LICENSE:=GPL-2.0
+PKG_LICENSE_FILES:=COPYING
 
 PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
@@ -34,16 +32,19 @@ define Package/usbutils
   URL:=http://www.linux-usb.org/
 endef
 
+USB_IDS_REV:=0a6be488b4c1485d30c9efee1cc895af5d4a1383
+USB_IDS_FILE:=usb.ids.$(USB_IDS_REV)
 define Download/usb_ids
   FILE:=$(USB_IDS_FILE)
-  URL:=https://raw.githubusercontent.com/gentoo/hwids/d9e840aa3d5cedf5637d59ef0dc555c380a0e822
-  MD5SUM:=$(USB_IDS_MD5SUM)
+  URL_FILE:=usb.ids
+  URL:=@GITHUB/gentoo/hwids/$(USB_IDS_REV)
+  HASH:=2d0403ffccc0ff7150e32c0bf8e2878816b76ba08d2c3bb1059f33627a3da30f
 endef
 $(eval $(call Download,usb_ids))
 
 define Build/Prepare
 	$(Build/Prepare/Default)
-	$(CP) $(DL_DIR)/$(USB_IDS_FILE) $(PKG_BUILD_DIR)
+	$(CP) $(DL_DIR)/$(USB_IDS_FILE) $(PKG_BUILD_DIR)/usb.ids
 endef
 
 CONFIGURE_ARGS += \

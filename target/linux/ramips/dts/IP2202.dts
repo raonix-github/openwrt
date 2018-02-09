@@ -2,18 +2,12 @@
 
 #include "rt3050.dtsi"
 
-/ {
-	compatible = "IP2202", "ralink,rt3052-soc";
-	model = "Poray IP2202";
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
 
-	pinctrl {
-		state_default: pinctrl0 {
-			gpio {
-				ralink,group = "spi", "i2c", "jtag", "rgmii", "mdio", "uartf";
-				ralink,function = "gpio";
-			};
-		};
-	};
+/ {
+	compatible = "poray,ip2202", "ralink,rt3052-soc";
+	model = "Poray IP2202";
 
 	cfi@1f000000 {
 		compatible = "cfi-flash";
@@ -47,25 +41,17 @@
 		};
 	};
 
-	ethernet@10100000 {
-		mtd-mac-address = <&factory 0x28>;
-	};
-
-	esw@10110000 {
-		mediatek,portmap = <0x2f>;
-	};
-
 	gpio-leds {
 		compatible = "gpio-leds";
 
 		run {
 			label = "ip2202:green:run";
-			gpios = <&gpio0 9 1>;
+			gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
 		};
 
 		net {
 			label = "ip2202:amber:net";
-			gpios = <&gpio0 13 1>;
+			gpios = <&gpio0 13 GPIO_ACTIVE_LOW>;
 		};
 	};
 
@@ -77,12 +63,29 @@
 
 		reset {
 			label = "reset";
-			gpios = <&gpio0 10 1>;
-			linux,code = <0x198>;
+			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
 		};
 	};
+};
 
-	otg@101c0000 {
-		status = "okay";
+&pinctrl {
+	state_default: pinctrl0 {
+		gpio {
+			ralink,group = "spi", "i2c", "jtag", "rgmii", "mdio", "uartf";
+			ralink,function = "gpio";
+		};
 	};
+};
+
+&ethernet {
+	mtd-mac-address = <&factory 0x28>;
+};
+
+&esw {
+	mediatek,portmap = <0x2f>;
+};
+
+&otg {
+	status = "okay";
 };

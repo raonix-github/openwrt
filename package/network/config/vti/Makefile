@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=vti
 PKG_VERSION:=1
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_LICENSE:=GPL-2.0
 
 include $(INCLUDE_DIR)/package.mk
@@ -58,6 +58,14 @@ endef
 define Package/vti/install
 	$(INSTALL_DIR) $(1)/lib/netifd/proto
 	$(INSTALL_BIN) ./files/vti.sh $(1)/lib/netifd/proto/vti.sh
+endef
+
+define Package/vtiv4/install
+	:
+endef
+
+define Package/vtiv6/install
+	:
 endef
 
 $(eval $(call BuildPackage,vti))

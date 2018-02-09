@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2010-2016 Jo-Philipp Wich <jow@openwrt.org>
+# Copyright (C) 2010-2016 Jo-Philipp Wich <jo@mein.io>
 #
 # This is free software, licensed under the GPL 2 license.
 #
@@ -7,22 +7,22 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libiwinfo
-PKG_VERSION:=2016-01-25
-PKG_RELEASE=$(PKG_SOURCE_VERSION)
+PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=$(OPENWRT_GIT)/project/iwinfo.git
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=e4aca3910dff532ed878d0ceaf1ab6e8ad7719bf
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
-PKG_MAINTAINER:=Jo-Philipp Wich <jow@openwrt.org>
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/iwinfo.git
+PKG_SOURCE_DATE:=2018-01-16
+PKG_SOURCE_VERSION:=5a5e21b158ae48b86339d337823a01a0f132b09c
+PKG_MIRROR_HASH:=afca1f5588aff47fdd4ec7ecd4c46f2b8027de7d0d70901f0eaf486887c3265c
+PKG_MAINTAINER:=Jo-Philipp Wich <jo@mein.io>
 PKG_LICENSE:=GPL-2.0
+
+PKG_FLAGS := nonshared
 
 PKG_CONFIG_DEPENDS := \
 	CONFIG_PACKAGE_kmod-brcm-wl \
 	CONFIG_PACKAGE_kmod-brcm-wl-mini \
 	CONFIG_PACKAGE_kmod-brcm-wl-mimo \
-	CONFIG_PACKAGE_kmod-madwifi \
 	CONFIG_PACKAGE_kmod-cfg80211
 
 include $(INCLUDE_DIR)/package.mk
@@ -38,7 +38,7 @@ endef
 
 define Package/libiwinfo/description
   Wireless information library with consistent interface for proprietary Broadcom,
-  madwifi, nl80211 and wext driver interfaces.
+  nl80211 and wext driver interfaces.
 endef
 
 
@@ -75,7 +75,6 @@ IWINFO_BACKENDS := \
 	$(if $(CONFIG_PACKAGE_kmod-brcm-wl),wl) \
 	$(if $(CONFIG_PACKAGE_kmod-brcm-wl-mini),wl) \
 	$(if $(CONFIG_PACKAGE_kmod-brcm-wl-mimo),wl) \
-	$(if $(CONFIG_PACKAGE_kmod-madwifi),madwifi) \
 	$(if $(CONFIG_PACKAGE_kmod-cfg80211),nl80211)
 
 TARGET_CFLAGS += \

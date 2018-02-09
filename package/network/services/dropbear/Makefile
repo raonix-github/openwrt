@@ -8,27 +8,31 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=dropbear
-PKG_VERSION:=2015.71
-PKG_RELEASE:=3
+PKG_VERSION:=2017.75
+PKG_RELEASE:=5
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:= \
 	http://matt.ucc.asn.au/dropbear/releases/ \
 	https://dropbear.nl/mirror/releases/
-PKG_MD5SUM:=2ccc0a2f3e37ca221db12c5af6a88137
+PKG_HASH:=6cbc1dcb1c9709d226dff669e5604172a18cf5dbf9a201474d5618ae4465098c
 
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE libtomcrypt/LICENSE libtommath/LICENSE
+PKG_CPE_ID:=cpe:/a:matt_johnston:dropbear_ssh_server
 
 PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
 
-PKG_CONFIG_DEPENDS:=CONFIG_TARGET_INIT_PATH CONFIG_DROPBEAR_ECC CONFIG_DROPBEAR_CURVE25519
+PKG_CONFIG_DEPENDS:= \
+	CONFIG_TARGET_INIT_PATH CONFIG_DROPBEAR_ECC \
+	CONFIG_DROPBEAR_CURVE25519 CONFIG_DROPBEAR_ZLIB \
+	CONFIG_DROPBEAR_UTMP CONFIG_DROPBEAR_PUTUTLINE
 
 include $(INCLUDE_DIR)/package.mk
 
 ifneq ($(DUMP),1)
-  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell $(SH_FUNC) echo $(CONFIG_TARGET_INIT_PATH) | md5s)
+  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | mkhash md5)
 endif
 
 define Package/dropbear/Default
@@ -44,6 +48,7 @@ define Package/dropbear
   SECTION:=net
   CATEGORY:=Base system
   TITLE:=Small SSH2 client/server
+  DEPENDS:= +DROPBEAR_ZLIB:zlib
 endef
 
 define Package/dropbear/description
@@ -66,18 +71,18 @@ CONFIGURE_ARGS += \
 	--disable-pam \
 	--enable-openpty \
 	--enable-syslog \
-	$(if $(CONFIG_SHADOW_PASSWORDS),,--disable-shadow) \
 	--disable-lastlog \
+	--disable-utmpx \
 	$(if $(CONFIG_DROPBEAR_UTMP),,--disable-utmp) \
 	--disable-wtmp \
 	--disable-wtmpx \
 	--disable-loginfunc \
 	$(if $(CONFIG_DROPBEAR_PUTUTLINE),,--disable-pututline) \
 	--disable-pututxline \
-	--disable-zlib \
+	$(if $(CONFIG_DROPBEAR_ZLIB),,--disable-zlib) \
 	--enable-bundled-libtom
 
-TARGET_CFLAGS += -DDEFAULT_PATH=\\\"$(TARGET_INIT_PATH)\\\" -DARGTYPE=3 -ffunction-sections -fdata-sections
+TARGET_CFLAGS += -DARGTYPE=3 -ffunction-sections -fdata-sections
 TARGET_LDFLAGS += -Wl,--gc-sections
 
 define Build/Configure
@@ -103,6 +108,10 @@ define Build/Configure
 	       >$(PKG_BUILD_DIR)/options.h.new && \
 	  mv $(PKG_BUILD_DIR)/options.h.new $(PKG_BUILD_DIR)/options.h || exit 1; \
 	done
+
+	# remove protocol idented software version number
+	$(SED) 's,^#define LOCAL_IDENT .*$$$$,#define LOCAL_IDENT "SSH-2.0-dropbear",g' \
+		$(PKG_BUILD_DIR)/sysoptions.h
 
 	# Enforce rebuild of svr-chansession.c
 	rm -f $(PKG_BUILD_DIR)/svr-chansession.o

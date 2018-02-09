@@ -10,7 +10,7 @@ PKG_NAME:=ltq-adsl-mei
 PKG_RELEASE:=1
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/ltq-adsl-mei-$(BUILD_VARIANT)/
 
-PKG_MAINTAINER:=John Crispin <blogic@openwrt.org>
+PKG_MAINTAINER:=John Crispin <john@phrozen.org>
 PKG_CHECK_FORMAT_SECURITY:=0
 
 include $(INCLUDE_DIR)/package.mk
@@ -22,19 +22,14 @@ define KernelPackage/ltq-adsl-mei-template
   TITLE:=mei driver for $(1)
   URL:=http://www.lantiq.com/
   VARIANT:=$(1)
-  DEPENDS:=@TARGET_lantiq_$(2)
-  FILES:=$(PKG_BUILD_DIR)/ltq_mei_$(1).ko
-  AUTOLOAD:=$(call AutoLoad,50,ltq_mei_$(1))
+  DEPENDS:=@$(2)
+  FILES:=$(PKG_BUILD_DIR)/drv_mei_cpe.ko
+  AUTOLOAD:=$(call AutoLoad,50,drv_mei_cpe)
 endef
 
-KernelPackage/ltq-adsl-danube-mei=$(call KernelPackage/ltq-adsl-mei-template,danube,xway)
-KernelPackage/ltq-adsl-ar9-mei=$(call KernelPackage/ltq-adsl-mei-template,ar9,xway)
-KernelPackage/ltq-adsl-ase-mei=$(call KernelPackage/ltq-adsl-mei-template,ase,ase)
-
-define Build/Prepare
-	$(INSTALL_DIR) $(PKG_BUILD_DIR)/
-	$(CP) ./src/* $(PKG_BUILD_DIR)/
-endef
+KernelPackage/ltq-adsl-danube-mei=$(call KernelPackage/ltq-adsl-mei-template,danube,(TARGET_lantiq_xway||TARGET_lantiq_xway_legacy))
+KernelPackage/ltq-adsl-ar9-mei=$(call KernelPackage/ltq-adsl-mei-template,ar9,TARGET_lantiq_xway)
+KernelPackage/ltq-adsl-ase-mei=$(call KernelPackage/ltq-adsl-mei-template,ase,TARGET_lantiq_ase)
 
 define Build/Configure
 endef

@@ -14,6 +14,7 @@ define KernelPackage/w1
   TITLE:=Dallas's 1-wire support
   KCONFIG:=CONFIG_W1
   FILES:=$(LINUX_DIR)/drivers/w1/wire.ko
+  DEPENDS:=+LINUX_4_14:kmod-hwmon-core
 endef
 
 define KernelPackage/w1/description
@@ -82,7 +83,7 @@ $(eval $(call KernelPackage,w1-master-ds2490))
 
 define KernelPackage/w1-master-mxc
   TITLE:=Freescale MXC 1-wire busmaster
-  DEPENDS:=@(TARGET_mxs||TARGET_imx6)
+  DEPENDS:=@TARGET_imx6
   KCONFIG:=CONFIG_W1_MASTER_MXC
   FILES:=$(W1_MASTERS_DIR)/mxc_w1.ko
   AUTOLOAD:=$(call AutoProbe,mxc_w1)

@@ -2,12 +2,20 @@
 # Copyright (C) 2012-2015 OpenWrt.org
 
 move_config() {
-	. /lib/upgrade/platform.sh
+	local partdev
 
-	if platform_export_bootpart; then
-		mount -t ext4 -o rw,noatime "$BOOTPART" /mnt
-		mv -f /mnt/sysupgrade.tgz /
-		umount /mnt
+	. /lib/upgrade/common.sh
+
+	if export_bootdevice && export_partdevice partdev 1; then
+		mkdir -p /boot
+		if mount -t ext4 -o ro,noatime "/dev/$partdev" /boot; then
+			if [ -f /boot/sysupgrade.tgz ]; then
+				mount /boot -o remount,rw,noatime
+				mv -f /boot/sysupgrade.tgz /
+				mount /boot -o remount,ro,noatime
+			fi
+			mount --bind /boot/boot /boot
+		fi
 	fi
 }
 

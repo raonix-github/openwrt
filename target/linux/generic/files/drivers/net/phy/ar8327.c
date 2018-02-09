@@ -223,9 +223,7 @@ ar8327_led_work_func(struct work_struct *work)
 
 	aled = container_of(work, struct ar8327_led, led_work);
 
-	spin_lock(&aled->lock);
 	pattern = aled->pattern;
-	spin_unlock(&aled->lock);
 
 	ar8327_set_led_pattern(aled->sw_priv, aled->led_num,
 			       pattern);
@@ -308,9 +306,7 @@ ar8327_led_enable_hw_mode_show(struct device *dev,
 	struct ar8327_led *aled = led_cdev_to_ar8327_led(led_cdev);
 	ssize_t ret = 0;
 
-	spin_lock(&aled->lock);
-	ret += sprintf(buf, "%d\n", aled->enable_hw_mode);
-	spin_unlock(&aled->lock);
+	ret += scnprintf(buf, PAGE_SIZE, "%d\n", aled->enable_hw_mode);
 
 	return ret;
 }
@@ -510,6 +506,14 @@ ar8327_hw_config_pdata(struct ar8xxx_priv *priv,
 	ar8xxx_write(priv, AR8327_REG_PAD0_MODE, t);
 
 	t = ar8327_get_pad_cfg(pdata->pad5_cfg);
+	if (chip_is_ar8337(priv)) {
+		/*
+		 * Workaround: RGMII RX delay setting needs to be
+		 * always specified for AR8337 to avoid port 5
+		 * RX hang on high traffic / flood conditions
+		 */
+		t |= AR8327_PAD_RGMII_RXCLK_DELAY_EN;
+	}
 	ar8xxx_write(priv, AR8327_REG_PAD5_MODE, t);
 	t = ar8327_get_pad_cfg(pdata->pad6_cfg);
 	ar8xxx_write(priv, AR8327_REG_PAD6_MODE, t);
@@ -623,11 +627,11 @@ ar8327_hw_init(struct ar8xxx_priv *priv)
 	if (!priv->chip_data)
 		return -ENOMEM;
 
-	if (priv->phy->dev.of_node)
-		ret = ar8327_hw_config_of(priv, priv->phy->dev.of_node);
+	if (priv->phy->mdio.dev.of_node)
+		ret = ar8327_hw_config_of(priv, priv->phy->mdio.dev.of_node);
 	else
 		ret = ar8327_hw_config_pdata(priv,
-					     priv->phy->dev.platform_data);
+					     priv->phy->mdio.dev.platform_data);
 
 	if (ret)
 		return ret;
@@ -674,6 +678,39 @@ ar8327_init_globals(struct ar8xxx_priv *priv)
 	/* Disable EEE on all phy's due to stability issues */
 	for (i = 0; i < AR8XXX_NUM_PHYS; i++)
 		data->eee[i] = false;
+
+	if (chip_is_ar8337(priv)) {
+		/* Update HOL registers with values suggested by QCA switch team */
+		for (i = 0; i < AR8327_NUM_PORTS; i++) {
+			if (i == AR8216_PORT_CPU || i == 5 || i == 6) {
+				t = 0x3 << AR8327_PORT_HOL_CTRL0_EG_PRI0_BUF_S;
+				t |= 0x4 << AR8327_PORT_HOL_CTRL0_EG_PRI1_BUF_S;
+				t |= 0x4 << AR8327_PORT_HOL_CTRL0_EG_PRI2_BUF_S;
+				t |= 0x4 << AR8327_PORT_HOL_CTRL0_EG_PRI3_BUF_S;
+				t |= 0x6 << AR8327_PORT_HOL_CTRL0_EG_PRI4_BUF_S;
+				t |= 0x8 << AR8327_PORT_HOL_CTRL0_EG_PRI5_BUF_S;
+				t |= 0x1e << AR8327_PORT_HOL_CTRL0_EG_PORT_BUF_S;
+			} else {
+				t = 0x3 << AR8327_PORT_HOL_CTRL0_EG_PRI0_BUF_S;
+				t |= 0x4 << AR8327_PORT_HOL_CTRL0_EG_PRI1_BUF_S;
+				t |= 0x6 << AR8327_PORT_HOL_CTRL0_EG_PRI2_BUF_S;
+				t |= 0x8 << AR8327_PORT_HOL_CTRL0_EG_PRI3_BUF_S;
+				t |= 0x19 << AR8327_PORT_HOL_CTRL0_EG_PORT_BUF_S;
+			}
+			ar8xxx_write(priv, AR8327_REG_PORT_HOL_CTRL0(i), t);
+
+			t = 0x6 << AR8327_PORT_HOL_CTRL1_ING_BUF_S;
+			t |= AR8327_PORT_HOL_CTRL1_EG_PRI_BUF_EN;
+			t |= AR8327_PORT_HOL_CTRL1_EG_PORT_BUF_EN;
+			t |= AR8327_PORT_HOL_CTRL1_WRED_EN;
+			ar8xxx_rmw(priv, AR8327_REG_PORT_HOL_CTRL1(i),
+				   AR8327_PORT_HOL_CTRL1_ING_BUF |
+				   AR8327_PORT_HOL_CTRL1_EG_PRI_BUF_EN |
+				   AR8327_PORT_HOL_CTRL1_EG_PORT_BUF_EN |
+				   AR8327_PORT_HOL_CTRL1_WRED_EN,
+				   t);
+		}
+	}
 }
 
 static void
@@ -689,12 +726,20 @@ ar8327_init_port(struct ar8xxx_priv *priv, int port)
 	else
 		t = AR8216_PORT_STATUS_LINK_AUTO;
 
-	ar8xxx_write(priv, AR8327_REG_PORT_STATUS(port), t);
+	if (port != AR8216_PORT_CPU && port != 6) {
+		/*hw limitation:if configure mac when there is traffic,
+		port MAC may work abnormal. Need disable lan&wan mac at fisrt*/
+		ar8xxx_write(priv, AR8327_REG_PORT_STATUS(port), 0);
+		msleep(100);
+		t |= AR8216_PORT_STATUS_FLOW_CONTROL;
+		ar8xxx_write(priv, AR8327_REG_PORT_STATUS(port), t);
+	} else {
+		ar8xxx_write(priv, AR8327_REG_PORT_STATUS(port), t);
+	}
+
 	ar8xxx_write(priv, AR8327_REG_PORT_HEADER(port), 0);
 
-	t = 1 << AR8327_PORT_VLAN0_DEF_SVID_S;
-	t |= 1 << AR8327_PORT_VLAN0_DEF_CVID_S;
-	ar8xxx_write(priv, AR8327_REG_PORT_VLAN0(port), t);
+	ar8xxx_write(priv, AR8327_REG_PORT_VLAN0(port), 0);
 
 	t = AR8327_PORT_VLAN1_OUT_MODE_UNTOUCH << AR8327_PORT_VLAN1_OUT_MODE_S;
 	ar8xxx_write(priv, AR8327_REG_PORT_VLAN1(port), t);
@@ -1366,6 +1411,16 @@ static const struct switch_dev_ops ar8327_sw_ops = {
 	.apply_config = ar8327_sw_hw_apply,
 	.reset_switch = ar8xxx_sw_reset_switch,
 	.get_port_link = ar8xxx_sw_get_port_link,
+/* The following op is disabled as it hogs the CPU and degrades performance.
+   An implementation has been attempted in 4d8a66d but reading MIB data is slow
+   on ar8xxx switches.
+
+   The high CPU load has been traced down to the ar8xxx_reg_wait() call in
+   ar8xxx_mib_op(), which has to usleep_range() till the MIB busy flag set by
+   the request to update the MIB counter is cleared. */
+#if 0
+	.get_port_stats = ar8xxx_sw_get_port_stats,
+#endif
 };
 
 const struct ar8xxx_chip ar8327_chip = {
@@ -1393,7 +1448,6 @@ const struct ar8xxx_chip ar8327_chip = {
 	.atu_flush_port = ar8327_atu_flush_port,
 	.vtu_flush = ar8327_vtu_flush,
 	.vtu_load_vlan = ar8327_vtu_load_vlan,
-	.phy_fixup = ar8327_phy_fixup,
 	.set_mirror_regs = ar8327_set_mirror_regs,
 	.get_arl_entry = ar8327_get_arl_entry,
 	.sw_hw_apply = ar8327_sw_hw_apply,
@@ -1437,4 +1491,3 @@ const struct ar8xxx_chip ar8337_chip = {
 	.mib_decs = ar8236_mibs,
 	.mib_func = AR8327_REG_MIB_FUNC
 };
-

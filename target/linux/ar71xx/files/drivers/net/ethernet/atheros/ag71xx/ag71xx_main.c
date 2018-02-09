@@ -13,13 +13,6 @@
 
 #include "ag71xx.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
-static inline void skb_free_frag(void *data)
-{
-	put_page(virt_to_head_page(data));
-}
-#endif
-
 #define AG71XX_DEFAULT_MSG_ENABLE	\
 	(NETIF_MSG_DRV			\
 	| NETIF_MSG_PROBE		\
@@ -95,41 +88,6 @@ static inline void ag71xx_dump_intr(struct ag71xx *ag, char *label, u32 intr)
 		(intr & AG71XX_INT_RX_PR) ? "RXPR " : "",
 		(intr & AG71XX_INT_RX_OF) ? "RXOF " : "",
 		(intr & AG71XX_INT_RX_BE) ? "RXBE " : "");
-}
-
-static void ag71xx_ring_free(struct ag71xx_ring *ring)
-{
-	int ring_size = BIT(ring->order);
-	kfree(ring->buf);
-
-	if (ring->descs_cpu)
-		dma_free_coherent(NULL, ring_size * AG71XX_DESC_SIZE,
-				  ring->descs_cpu, ring->descs_dma);
-}
-
-static int ag71xx_ring_alloc(struct ag71xx_ring *ring)
-{
-	int ring_size = BIT(ring->order);
-	int err;
-
-	ring->descs_cpu = dma_alloc_coherent(NULL, ring_size * AG71XX_DESC_SIZE,
-					     &ring->descs_dma, GFP_ATOMIC);
-	if (!ring->descs_cpu) {
-		err = -ENOMEM;
-		goto err;
-	}
-
-
-	ring->buf = kzalloc(ring_size * sizeof(*ring->buf), GFP_KERNEL);
-	if (!ring->buf) {
-		err = -ENOMEM;
-		goto err;
-	}
-
-	return 0;
-
-err:
-	return err;
 }
 
 static void ag71xx_ring_tx_clean(struct ag71xx *ag)
@@ -322,30 +280,56 @@ static int ag71xx_ring_rx_refill(struct ag71xx *ag)
 
 static int ag71xx_rings_init(struct ag71xx *ag)
 {
-	int ret;
+	struct ag71xx_ring *tx = &ag->tx_ring;
+	struct ag71xx_ring *rx = &ag->rx_ring;
+	int ring_size = BIT(tx->order) + BIT(rx->order);
+	int tx_size = BIT(tx->order);
 
-	ret = ag71xx_ring_alloc(&ag->tx_ring);
-	if (ret)
-		return ret;
+	tx->buf = kzalloc(ring_size * sizeof(*tx->buf), GFP_KERNEL);
+	if (!tx->buf)
+		return -ENOMEM;
+
+	tx->descs_cpu = dma_alloc_coherent(NULL, ring_size * AG71XX_DESC_SIZE,
+					   &tx->descs_dma, GFP_ATOMIC);
+	if (!tx->descs_cpu) {
+		kfree(tx->buf);
+		tx->buf = NULL;
+		return -ENOMEM;
+	}
+
+	rx->buf = &tx->buf[BIT(tx->order)];
+	rx->descs_cpu = ((void *)tx->descs_cpu) + tx_size * AG71XX_DESC_SIZE;
+	rx->descs_dma = tx->descs_dma + tx_size * AG71XX_DESC_SIZE;
 
 	ag71xx_ring_tx_init(ag);
+	return ag71xx_ring_rx_init(ag);
+}
 
-	ret = ag71xx_ring_alloc(&ag->rx_ring);
-	if (ret)
-		return ret;
+static void ag71xx_rings_free(struct ag71xx *ag)
+{
+	struct ag71xx_ring *tx = &ag->tx_ring;
+	struct ag71xx_ring *rx = &ag->rx_ring;
+	int ring_size = BIT(tx->order) + BIT(rx->order);
 
-	ret = ag71xx_ring_rx_init(ag);
-	return ret;
+	if (tx->descs_cpu)
+		dma_free_coherent(NULL, ring_size * AG71XX_DESC_SIZE,
+				  tx->descs_cpu, tx->descs_dma);
+
+	kfree(tx->buf);
+
+	tx->descs_cpu = NULL;
+	rx->descs_cpu = NULL;
+	tx->buf = NULL;
+	rx->buf = NULL;
 }
 
 static void ag71xx_rings_cleanup(struct ag71xx *ag)
 {
 	ag71xx_ring_rx_clean(ag);
-	ag71xx_ring_free(&ag->rx_ring);
-
 	ag71xx_ring_tx_clean(ag);
+	ag71xx_rings_free(ag);
+
 	netdev_reset_queue(ag->dev);
-	ag71xx_ring_free(&ag->tx_ring);
 }
 
 static unsigned char *ag71xx_speed_str(struct ag71xx *ag)
@@ -453,9 +437,12 @@ static void ag71xx_hw_stop(struct ag71xx *ag)
 static void ag71xx_hw_setup(struct ag71xx *ag)
 {
 	struct ag71xx_platform_data *pdata = ag71xx_get_pdata(ag);
+	u32 init = MAC_CFG1_INIT;
 
 	/* setup MAC configuration registers */
-	ag71xx_wr(ag, AG71XX_REG_MAC_CFG1, MAC_CFG1_INIT);
+	if (pdata->use_flow_control)
+		init |= MAC_CFG1_TFC | MAC_CFG1_RFC;
+	ag71xx_wr(ag, AG71XX_REG_MAC_CFG1, init);
 
 	ag71xx_sb(ag, AG71XX_REG_MAC_CFG2,
 		  MAC_CFG2_PAD_CRC_EN | MAC_CFG2_LEN_CHECK);
@@ -524,6 +511,8 @@ static void ag71xx_fast_reset(struct ag71xx *ag)
 	mii_reg = ag71xx_rr(ag, AG71XX_REG_MII_CFG);
 	rx_ds = ag71xx_rr(ag, AG71XX_REG_RX_DESC);
 
+	ag71xx_tx_packets(ag, true);
+
 	ath79_device_reset_set(reset_mask);
 	udelay(10);
 	ath79_device_reset_clear(reset_mask);
@@ -531,7 +520,6 @@ static void ag71xx_fast_reset(struct ag71xx *ag)
 
 	ag71xx_dma_reset(ag);
 	ag71xx_hw_setup(ag);
-	ag71xx_tx_packets(ag, true);
 	ag->tx_ring.curr = 0;
 	ag->tx_ring.dirty = 0;
 	netdev_reset_queue(ag->dev);
@@ -625,6 +613,22 @@ __ag71xx_link_adjust(struct ag71xx *ag, bool update)
 	ag71xx_wr(ag, AG71XX_REG_MAC_CFG2, cfg2);
 	ag71xx_wr(ag, AG71XX_REG_FIFO_CFG5, fifo5);
 	ag71xx_wr(ag, AG71XX_REG_MAC_IFCTL, ifctl);
+
+	if (pdata->disable_inline_checksum_engine) {
+		/*
+		 * The rx ring buffer can stall on small packets on QCA953x and
+		 * QCA956x. Disabling the inline checksum engine fixes the stall.
+		 * The wr, rr functions cannot be used since this hidden register
+		 * is outside of the normal ag71xx register block.
+		 */
+		void __iomem *dam = ioremap_nocache(0xb90001bc, 0x4);
+		if (dam) {
+			__raw_writel(__raw_readl(dam) & ~BIT(27), dam);
+			(void)__raw_readl(dam);
+			iounmap(dam);
+		}
+	}
+
 	ag71xx_hw_start(ag);
 
 	netif_carrier_on(ag->dev);
@@ -812,9 +816,11 @@ static netdev_tx_t ag71xx_hard_start_xmit(struct sk_buff *skb,
 	i = (ring->curr + n - 1) & ring_mask;
 	ring->buf[i].len = skb->len;
 	ring->buf[i].skb = skb;
-	ring->buf[i].timestamp = jiffies;
+	ag->timestamp = jiffies;
 
 	netdev_sent_queue(dev, skb->len);
+
+	skb_tx_timestamp(skb);
 
 	desc->ctrl &= ~DESC_EMPTY;
 	ring->curr += n;
@@ -905,12 +911,12 @@ static void ag71xx_tx_timeout(struct net_device *dev)
 	if (netif_msg_tx_err(ag))
 		pr_info("%s: tx timeout\n", ag->dev->name);
 
-	schedule_work(&ag->restart_work);
+	schedule_delayed_work(&ag->restart_work, 1);
 }
 
 static void ag71xx_restart_work_func(struct work_struct *work)
 {
-	struct ag71xx *ag = container_of(work, struct ag71xx, restart_work);
+	struct ag71xx *ag = container_of(work, struct ag71xx, restart_work.work);
 
 	rtnl_lock();
 	ag71xx_hw_disable(ag);
@@ -920,11 +926,11 @@ static void ag71xx_restart_work_func(struct work_struct *work)
 	rtnl_unlock();
 }
 
-static bool ag71xx_check_dma_stuck(struct ag71xx *ag, unsigned long timestamp)
+static bool ag71xx_check_dma_stuck(struct ag71xx *ag)
 {
 	u32 rx_sm, tx_sm, rx_fd;
 
-	if (likely(time_before(jiffies, timestamp + HZ/10)))
+	if (likely(time_before(jiffies, ag->timestamp + HZ/10)))
 		return false;
 
 	if (!netif_carrier_ok(ag->dev))
@@ -947,6 +953,7 @@ static int ag71xx_tx_packets(struct ag71xx *ag, bool flush)
 {
 	struct ag71xx_ring *ring = &ag->tx_ring;
 	struct ag71xx_platform_data *pdata = ag71xx_get_pdata(ag);
+	bool dma_stuck = false;
 	int ring_mask = BIT(ring->order) - 1;
 	int ring_size = BIT(ring->order);
 	int sent = 0;
@@ -962,8 +969,10 @@ static int ag71xx_tx_packets(struct ag71xx *ag, bool flush)
 
 		if (!flush && !ag71xx_desc_empty(desc)) {
 			if (pdata->is_ar724x &&
-			    ag71xx_check_dma_stuck(ag, ring->buf[i].timestamp))
-				schedule_work(&ag->restart_work);
+			    ag71xx_check_dma_stuck(ag)) {
+				schedule_delayed_work(&ag->restart_work, HZ / 2);
+				dma_stuck = true;
+			}
 			break;
 		}
 
@@ -990,15 +999,18 @@ static int ag71xx_tx_packets(struct ag71xx *ag, bool flush)
 
 	DBG("%s: %d packets sent out\n", ag->dev->name, sent);
 
-	ag->dev->stats.tx_bytes += bytes_compl;
-	ag->dev->stats.tx_packets += sent;
-
 	if (!sent)
 		return 0;
+
+	ag->dev->stats.tx_bytes += bytes_compl;
+	ag->dev->stats.tx_packets += sent;
 
 	netdev_completed_queue(ag->dev, sent, bytes_compl);
 	if ((ring->curr - ring->dirty) < (ring_size * 3) / 4)
 		netif_wake_queue(ag->dev);
+
+	if (!dma_stuck)
+		cancel_delayed_work(&ag->restart_work);
 
 	return sent;
 }
@@ -1318,7 +1330,7 @@ static int ag71xx_probe(struct platform_device *pdev)
 	dev->netdev_ops = &ag71xx_netdev_ops;
 	dev->ethtool_ops = &ag71xx_ethtool_ops;
 
-	INIT_WORK(&ag->restart_work, ag71xx_restart_work_func);
+	INIT_DELAYED_WORK(&ag->restart_work, ag71xx_restart_work_func);
 
 	init_timer(&ag->oom_timer);
 	ag->oom_timer.data = (unsigned long) dev;

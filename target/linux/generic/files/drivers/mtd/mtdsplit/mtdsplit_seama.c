@@ -30,7 +30,7 @@ struct seama_header {
 };
 
 static int mtdsplit_parse_seama(struct mtd_info *master,
-				struct mtd_partition **pparts,
+				const struct mtd_partition **pparts,
 				struct mtd_part_parser_data *data)
 {
 	struct seama_header hdr;
@@ -79,8 +79,8 @@ static int mtdsplit_parse_seama(struct mtd_info *master,
 		return -ENOMEM;
 
 	parts[0].name = KERNEL_PART_NAME;
-	parts[0].offset = 0;
-	parts[0].size = rootfs_offset;
+	parts[0].offset = sizeof hdr + be16_to_cpu(hdr.metasize);
+	parts[0].size = rootfs_offset - parts[0].offset;
 
 	if (type == MTDSPLIT_PART_TYPE_UBI)
 		parts[1].name = UBI_PART_NAME;

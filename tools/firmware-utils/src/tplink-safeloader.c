@@ -53,6 +53,8 @@
 #define ALIGN(x,a) ({ typeof(a) __a = (a); (((x) + __a - 1) & ~(__a - 1)); })
 
 
+#define MAX_PARTITIONS	32
+
 /** An image partition table entry */
 struct image_partition_entry {
 	const char *name;
@@ -67,6 +69,17 @@ struct flash_partition_entry {
 	uint32_t size;
 };
 
+/** Firmware layout description */
+struct device_info {
+	const char *id;
+	const char *vendor;
+	const char *support_list;
+	char support_trail;
+	const char *soft_ver;
+	const struct flash_partition_entry partitions[MAX_PARTITIONS+1];
+	const char *first_sysupgrade_partition;
+	const char *last_sysupgrade_partition;
+};
 
 /** The content of the soft-version structure */
 struct __attribute__((__packed__)) soft_version {
@@ -102,44 +115,807 @@ static const uint8_t md5_salt[16] = {
 };
 
 
-/** Vendor information for CPE210/220/510/520 */
-static const char cpe510_vendor[] = "CPE510(TP-LINK|UN|N300-5):1.0\r\n";
+/** Firmware layout table */
+static struct device_info boards[] = {
+	/** Firmware layout for the CPE210/220 */
+	{
+		.id	= "CPE210",
+		.vendor	= "CPE510(TP-LINK|UN|N300-5):1.0\r\n",
+		.support_list =
+			"SupportList:\r\n"
+			"CPE210(TP-LINK|UN|N300-2):1.0\r\n"
+			"CPE210(TP-LINK|UN|N300-2):1.1\r\n"
+			"CPE210(TP-LINK|US|N300-2):1.1\r\n"
+			"CPE210(TP-LINK|EU|N300-2):1.1\r\n"
+			"CPE220(TP-LINK|UN|N300-2):1.1\r\n"
+			"CPE220(TP-LINK|US|N300-2):1.1\r\n"
+			"CPE220(TP-LINK|EU|N300-2):1.1\r\n",
+		.support_trail = '\xff',
+		.soft_ver = NULL,
 
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"partition-table", 0x20000, 0x02000},
+			{"default-mac", 0x30000, 0x00020},
+			{"product-info", 0x31100, 0x00100},
+			{"signature", 0x32000, 0x00400},
+			{"os-image", 0x40000, 0x170000},
+			{"soft-version", 0x1b0000, 0x00100},
+			{"support-list", 0x1b1000, 0x00400},
+			{"file-system", 0x1c0000, 0x600000},
+			{"user-config", 0x7c0000, 0x10000},
+			{"default-config", 0x7d0000, 0x10000},
+			{"log", 0x7e0000, 0x10000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
 
-/**
-    The flash partition table for CPE210/220/510/520;
-    it is the same as the one used by the stock images.
-*/
-static const struct flash_partition_entry cpe510_partitions[] = {
-	{"fs-uboot", 0x00000, 0x20000},
-	{"partition-table", 0x20000, 0x02000},
-	{"default-mac", 0x30000, 0x00020},
-	{"product-info", 0x31100, 0x00100},
-	{"signature", 0x32000, 0x00400},
-	{"os-image", 0x40000, 0x170000},
-	{"soft-version", 0x1b0000, 0x00100},
-	{"support-list", 0x1b1000, 0x00400},
-	{"file-system", 0x1c0000, 0x600000},
-	{"user-config", 0x7c0000, 0x10000},
-	{"default-config", 0x7d0000, 0x10000},
-	{"log", 0x7e0000, 0x10000},
-	{"radio", 0x7f0000, 0x10000},
-	{NULL, 0, 0}
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	/** Firmware layout for the CPE510/520 */
+	{
+		.id	= "CPE510",
+		.vendor	= "CPE510(TP-LINK|UN|N300-5):1.0\r\n",
+		.support_list =
+			"SupportList:\r\n"
+			"CPE510(TP-LINK|UN|N300-5):1.0\r\n"
+			"CPE510(TP-LINK|UN|N300-5):1.1\r\n"
+			"CPE510(TP-LINK|UN|N300-5):1.1\r\n"
+			"CPE510(TP-LINK|US|N300-5):1.1\r\n"
+			"CPE510(TP-LINK|EU|N300-5):1.1\r\n"
+			"CPE520(TP-LINK|UN|N300-5):1.1\r\n"
+			"CPE520(TP-LINK|US|N300-5):1.1\r\n"
+			"CPE520(TP-LINK|EU|N300-5):1.1\r\n",
+		.support_trail = '\xff',
+		.soft_ver = NULL,
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"partition-table", 0x20000, 0x02000},
+			{"default-mac", 0x30000, 0x00020},
+			{"product-info", 0x31100, 0x00100},
+			{"signature", 0x32000, 0x00400},
+			{"os-image", 0x40000, 0x170000},
+			{"soft-version", 0x1b0000, 0x00100},
+			{"support-list", 0x1b1000, 0x00400},
+			{"file-system", 0x1c0000, 0x600000},
+			{"user-config", 0x7c0000, 0x10000},
+			{"default-config", 0x7d0000, 0x10000},
+			{"log", 0x7e0000, 0x10000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	{
+		.id	= "WBS210",
+		.vendor	= "CPE510(TP-LINK|UN|N300-5):1.0\r\n",
+		.support_list =
+			"SupportList:\r\n"
+			"WBS210(TP-LINK|UN|N300-2):1.20\r\n"
+			"WBS210(TP-LINK|US|N300-2):1.20\r\n"
+			"WBS210(TP-LINK|EU|N300-2):1.20\r\n",
+		.support_trail = '\xff',
+		.soft_ver = NULL,
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"partition-table", 0x20000, 0x02000},
+			{"default-mac", 0x30000, 0x00020},
+			{"product-info", 0x31100, 0x00100},
+			{"signature", 0x32000, 0x00400},
+			{"os-image", 0x40000, 0x170000},
+			{"soft-version", 0x1b0000, 0x00100},
+			{"support-list", 0x1b1000, 0x00400},
+			{"file-system", 0x1c0000, 0x600000},
+			{"user-config", 0x7c0000, 0x10000},
+			{"default-config", 0x7d0000, 0x10000},
+			{"log", 0x7e0000, 0x10000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	{
+		.id	= "WBS510",
+		.vendor	= "CPE510(TP-LINK|UN|N300-5):1.0\r\n",
+		.support_list =
+			"SupportList:\r\n"
+			"WBS510(TP-LINK|UN|N300-5):1.20\r\n"
+			"WBS510(TP-LINK|US|N300-5):1.20\r\n"
+			"WBS510(TP-LINK|EU|N300-5):1.20\r\n",
+		.support_trail = '\xff',
+		.soft_ver = NULL,
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"partition-table", 0x20000, 0x02000},
+			{"default-mac", 0x30000, 0x00020},
+			{"product-info", 0x31100, 0x00100},
+			{"signature", 0x32000, 0x00400},
+			{"os-image", 0x40000, 0x170000},
+			{"soft-version", 0x1b0000, 0x00100},
+			{"support-list", 0x1b1000, 0x00400},
+			{"file-system", 0x1c0000, 0x600000},
+			{"user-config", 0x7c0000, 0x10000},
+			{"default-config", 0x7d0000, 0x10000},
+			{"log", 0x7e0000, 0x10000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	/** Firmware layout for the C2600 */
+	{
+		.id = "C2600",
+		.vendor = "",
+		.support_list =
+			"SupportList:\r\n"
+			"{product_name:Archer C2600,product_ver:1.0.0,special_id:00000000}\r\n",
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		.partitions = {
+			{"SBL1", 0x00000, 0x20000},
+			{"MIBIB", 0x20000, 0x20000},
+			{"SBL2", 0x40000, 0x20000},
+			{"SBL3", 0x60000, 0x30000},
+			{"DDRCONFIG", 0x90000, 0x10000},
+			{"SSD", 0xa0000, 0x10000},
+			{"TZ", 0xb0000, 0x30000},
+			{"RPM", 0xe0000, 0x20000},
+			{"fs-uboot", 0x100000, 0x70000},
+			{"uboot-env", 0x170000, 0x40000},
+			{"radio", 0x1b0000, 0x40000},
+			{"os-image", 0x1f0000, 0x200000},
+			{"file-system", 0x3f0000, 0x1b00000},
+			{"default-mac", 0x1ef0000, 0x00200},
+			{"pin", 0x1ef0200, 0x00200},
+			{"product-info", 0x1ef0400, 0x0fc00},
+			{"partition-table", 0x1f00000, 0x10000},
+			{"soft-version", 0x1f10000, 0x10000},
+			{"support-list", 0x1f20000, 0x10000},
+			{"profile", 0x1f30000, 0x10000},
+			{"default-config", 0x1f40000, 0x10000},
+			{"user-config", 0x1f50000, 0x40000},
+			{"qos-db", 0x1f90000, 0x40000},
+			{"usb-config", 0x1fd0000, 0x10000},
+			{"log", 0x1fe0000, 0x20000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	/** Firmware layout for the C25v1 */
+	{
+		.id = "ARCHER-C25-V1",
+		.support_list =
+			"SupportList:\n"
+			"{product_name:ArcherC25,product_ver:1.0.0,special_id:00000000}\n"
+			"{product_name:ArcherC25,product_ver:1.0.0,special_id:55530000}\n"
+			"{product_name:ArcherC25,product_ver:1.0.0,special_id:45550000}\n",
+		.support_trail = '\x00',
+		.soft_ver = "soft_ver:1.0.0\n",
+
+		/**
+		    We use a bigger os-image partition than the stock images (and thus
+		    smaller file-system), as our kernel doesn't fit in the stock firmware's
+		    1MB os-image.
+		*/
+		.partitions = {
+			{"factory-boot", 0x00000, 0x20000},
+			{"fs-uboot", 0x20000, 0x10000},
+			{"os-image", 0x30000, 0x180000},	/* Stock: base 0x30000 size 0x100000 */
+			{"file-system", 0x1b0000, 0x620000},	/* Stock: base 0x130000 size 0x6a0000 */
+			{"user-config", 0x7d0000, 0x04000},
+			{"default-mac", 0x7e0000, 0x00100},
+			{"device-id", 0x7e0100, 0x00100},
+			{"extra-para", 0x7e0200, 0x00100},
+			{"pin", 0x7e0300, 0x00100},
+			{"support-list", 0x7e0400, 0x00400},
+			{"soft-version", 0x7e0800, 0x00400},
+			{"product-info", 0x7e0c00, 0x01400},
+			{"partition-table", 0x7e2000, 0x01000},
+			{"profile", 0x7e3000, 0x01000},
+			{"default-config", 0x7e4000, 0x04000},
+			{"merge-config", 0x7ec000, 0x02000},
+			{"qos-db", 0x7ee000, 0x02000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	/** Firmware layout for the C58v1 */
+	{
+		.id	= "ARCHER-C58-V1",
+		.vendor	= "",
+		.support_list =
+			"SupportList:\r\n"
+			"{product_name:Archer C58,product_ver:1.0.0,special_id:00000000}\r\n"
+			"{product_name:Archer C58,product_ver:1.0.0,special_id:45550000}\r\n"
+			"{product_name:Archer C58,product_ver:1.0.0,special_id:55530000}\r\n",
+		.support_trail = '\x00',
+		.soft_ver = "soft_ver:1.0.0\n",
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x10000},
+			{"default-mac", 0x10000, 0x00200},
+			{"pin", 0x10200, 0x00200},
+			{"product-info", 0x10400, 0x00100},
+			{"partition-table", 0x10500, 0x00800},
+			{"soft-version", 0x11300, 0x00200},
+			{"support-list", 0x11500, 0x00100},
+			{"device-id", 0x11600, 0x00100},
+			{"profile", 0x11700, 0x03900},
+			{"default-config", 0x15000, 0x04000},
+			{"user-config", 0x19000, 0x04000},
+			{"os-image", 0x20000, 0x180000},
+			{"file-system", 0x1a0000, 0x648000},
+			{"certyficate", 0x7e8000, 0x08000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	/** Firmware layout for the C59v1 */
+	{
+		.id	= "ARCHER-C59-V1",
+		.vendor	= "",
+		.support_list =
+			"SupportList:\r\n"
+			"{product_name:Archer C59,product_ver:1.0.0,special_id:00000000}\r\n"
+			"{product_name:Archer C59,product_ver:1.0.0,special_id:45550000}\r\n"
+			"{product_name:Archer C59,product_ver:1.0.0,special_id:52550000}\r\n"
+			"{product_name:Archer C59,product_ver:1.0.0,special_id:55530000}\r\n",
+		.support_trail = '\x00',
+		.soft_ver = "soft_ver:1.0.0\n",
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x10000},
+			{"default-mac", 0x10000, 0x00200},
+			{"pin", 0x10200, 0x00200},
+			{"device-id", 0x10400, 0x00100},
+			{"product-info", 0x10500, 0x0fb00},
+			{"os-image", 0x20000, 0x180000},
+			{"file-system", 0x1a0000, 0xcb0000},
+			{"partition-table", 0xe50000, 0x10000},
+			{"soft-version", 0xe60000, 0x10000},
+			{"support-list", 0xe70000, 0x10000},
+			{"profile", 0xe80000, 0x10000},
+			{"default-config", 0xe90000, 0x10000},
+			{"user-config", 0xea0000, 0x40000},
+			{"usb-config", 0xee0000, 0x10000},
+			{"certificate", 0xef0000, 0x10000},
+			{"qos-db", 0xf00000, 0x40000},
+			{"log", 0xfe0000, 0x10000},
+			{"radio", 0xff0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	/** Firmware layout for the C60v1 */
+	{
+		.id	= "ARCHER-C60-V1",
+		.vendor	= "",
+		.support_list =
+			"SupportList:\r\n"
+			"{product_name:Archer C60,product_ver:1.0.0,special_id:00000000}\r\n"
+			"{product_name:Archer C60,product_ver:1.0.0,special_id:45550000}\r\n"
+			"{product_name:Archer C60,product_ver:1.0.0,special_id:55530000}\r\n",
+		.support_trail = '\x00',
+		.soft_ver = "soft_ver:1.0.0\n",
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x10000},
+			{"default-mac", 0x10000, 0x00200},
+			{"pin", 0x10200, 0x00200},
+			{"product-info", 0x10400, 0x00100},
+			{"partition-table", 0x10500, 0x00800},
+			{"soft-version", 0x11300, 0x00200},
+			{"support-list", 0x11500, 0x00100},
+			{"device-id", 0x11600, 0x00100},
+			{"profile", 0x11700, 0x03900},
+			{"default-config", 0x15000, 0x04000},
+			{"user-config", 0x19000, 0x04000},
+			{"os-image", 0x20000, 0x180000},
+			{"file-system", 0x1a0000, 0x648000},
+			{"certyficate", 0x7e8000, 0x08000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	/** Firmware layout for the C5 */
+	{
+		.id = "ARCHER-C5-V2",
+		.vendor = "",
+		.support_list =
+			"SupportList:\r\n"
+			"{product_name:ArcherC5,product_ver:2.0.0,special_id:00000000}\r\n"
+			"{product_name:ArcherC5,product_ver:2.0.0,special_id:55530000}\r\n"
+			"{product_name:ArcherC5,product_ver:2.0.0,special_id:4A500000}\r\n", /* JP version */
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x40000},
+			{"os-image", 0x40000, 0x200000},
+			{"file-system", 0x240000, 0xc00000},
+			{"default-mac", 0xe40000, 0x00200},
+			{"pin", 0xe40200, 0x00200},
+			{"product-info", 0xe40400, 0x00200},
+			{"partition-table", 0xe50000, 0x10000},
+			{"soft-version", 0xe60000, 0x00200},
+			{"support-list", 0xe61000, 0x0f000},
+			{"profile", 0xe70000, 0x10000},
+			{"default-config", 0xe80000, 0x10000},
+			{"user-config", 0xe90000, 0x50000},
+			{"log", 0xee0000, 0x100000},
+			{"radio_bk", 0xfe0000, 0x10000},
+			{"radio", 0xff0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	/** Firmware layout for the C7 */
+	{
+		.id = "ARCHER-C7-V4",
+		.support_list =
+			"SupportList:\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:00000000}\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:41550000}\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:45550000}\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:4B520000}\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:42520000}\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:4A500000}\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:52550000}\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:54570000}\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:55530000}\n"
+			"{product_name:Archer C7,product_ver:4.0.0,special_id:43410000}\n",
+		.support_trail = '\x00',
+		.soft_ver = "soft_ver:1.0.0\n",
+
+		/**
+		    We use a bigger os-image partition than the stock images (and thus
+		    smaller file-system), as our kernel doesn't fit in the stock firmware's
+		    1MB os-image.
+		*/
+		.partitions = {
+			{"factory-boot", 0x00000, 0x20000},
+			{"fs-uboot", 0x20000, 0x20000},
+			{"os-image", 0x40000, 0x180000},	/* Stock: base 0x40000 size 0x120000 */
+			{"file-system", 0x1c0000, 0xd40000},	/* Stock: base 0x160000 size 0xda0000 */
+			{"default-mac", 0xf00000, 0x00200},
+			{"pin", 0xf00200, 0x00200},
+			{"device-id", 0xf00400, 0x00100},
+			{"product-info", 0xf00500, 0x0fb00},
+			{"soft-version", 0xf10000, 0x00100},
+			{"extra-para", 0xf11000, 0x01000},
+			{"support-list", 0xf12000, 0x0a000},
+			{"profile", 0xf1c000, 0x04000},
+			{"default-config", 0xf20000, 0x10000},
+			{"user-config", 0xf30000, 0x40000},
+			{"qos-db", 0xf70000, 0x40000},
+			{"certificate", 0xfb0000, 0x10000},
+			{"partition-table", 0xfc0000, 0x10000},
+			{"log", 0xfd0000, 0x20000},
+			{"radio", 0xff0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	/** Firmware layout for the C9 */
+	{
+		.id = "ARCHERC9",
+		.vendor = "",
+		.support_list =
+			"SupportList:\n"
+			"{product_name:ArcherC9,"
+			"product_ver:1.0.0,"
+			"special_id:00000000}\n",
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x40000},
+			{"os-image", 0x40000, 0x200000},
+			{"file-system", 0x240000, 0xc00000},
+			{"default-mac", 0xe40000, 0x00200},
+			{"pin", 0xe40200, 0x00200},
+			{"product-info", 0xe40400, 0x00200},
+			{"partition-table", 0xe50000, 0x10000},
+			{"soft-version", 0xe60000, 0x00200},
+			{"support-list", 0xe61000, 0x0f000},
+			{"profile", 0xe70000, 0x10000},
+			{"default-config", 0xe80000, 0x10000},
+			{"user-config", 0xe90000, 0x50000},
+			{"log", 0xee0000, 0x100000},
+			{"radio_bk", 0xfe0000, 0x10000},
+			{"radio", 0xff0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	/** Firmware layout for the EAP120 */
+	{
+		.id     = "EAP120",
+		.vendor = "EAP120(TP-LINK|UN|N300-2):1.0\r\n",
+		.support_list =
+			"SupportList:\r\n"
+			"EAP120(TP-LINK|UN|N300-2):1.0\r\n",
+		.support_trail = '\xff',
+		.soft_ver = NULL,
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"partition-table", 0x20000, 0x02000},
+			{"default-mac", 0x30000, 0x00020},
+			{"support-list", 0x31000, 0x00100},
+			{"product-info", 0x31100, 0x00100},
+			{"soft-version", 0x32000, 0x00100},
+			{"os-image", 0x40000, 0x180000},
+			{"file-system", 0x1c0000, 0x600000},
+			{"user-config", 0x7c0000, 0x10000},
+			{"backup-config", 0x7d0000, 0x10000},
+			{"log", 0x7e0000, 0x10000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	/** Firmware layout for the TL-WA850RE v2 */
+	{
+		.id     = "TLWA850REV2",
+		.vendor = "",
+		.support_list =
+			"SupportList:\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:55530000}\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:00000000}\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:55534100}\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:45550000}\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:4B520000}\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:42520000}\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:4A500000}\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:43410000}\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:41550000}\n"
+			"{product_name:TL-WA850RE,product_ver:2.0.0,special_id:52550000}\n",
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		/**
+		   576KB were moved from file-system to os-image
+		   in comparison to the stock image
+		*/
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"os-image", 0x20000, 0x150000},
+			{"file-system", 0x170000, 0x240000},
+			{"partition-table", 0x3b0000, 0x02000},
+			{"default-mac", 0x3c0000, 0x00020},
+			{"pin", 0x3c0100, 0x00020},
+			{"product-info", 0x3c1000, 0x01000},
+			{"soft-version", 0x3c2000, 0x00100},
+			{"support-list", 0x3c3000, 0x01000},
+			{"profile", 0x3c4000, 0x08000},
+			{"user-config", 0x3d0000, 0x10000},
+			{"default-config", 0x3e0000, 0x10000},
+			{"radio", 0x3f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	/** Firmware layout for the TL-WA855RE v1 */
+	{
+		.id     = "TLWA855REV1",
+		.vendor = "",
+		.support_list =
+			"SupportList:\n"
+			"{product_name:TL-WA855RE,product_ver:1.0.0,special_id:00000000}\n"
+			"{product_name:TL-WA855RE,product_ver:1.0.0,special_id:55530000}\n"
+			"{product_name:TL-WA855RE,product_ver:1.0.0,special_id:45550000}\n"
+			"{product_name:TL-WA855RE,product_ver:1.0.0,special_id:4B520000}\n"
+			"{product_name:TL-WA855RE,product_ver:1.0.0,special_id:42520000}\n"
+			"{product_name:TL-WA855RE,product_ver:1.0.0,special_id:4A500000}\n"
+			"{product_name:TL-WA855RE,product_ver:1.0.0,special_id:43410000}\n"
+			"{product_name:TL-WA855RE,product_ver:1.0.0,special_id:41550000}\n"
+			"{product_name:TL-WA855RE,product_ver:1.0.0,special_id:52550000}\n",
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"os-image", 0x20000, 0x150000},
+			{"file-system", 0x170000, 0x240000},
+			{"partition-table", 0x3b0000, 0x02000},
+			{"default-mac", 0x3c0000, 0x00020},
+			{"pin", 0x3c0100, 0x00020},
+			{"product-info", 0x3c1000, 0x01000},
+			{"soft-version", 0x3c2000, 0x00100},
+			{"support-list", 0x3c3000, 0x01000},
+			{"profile", 0x3c4000, 0x08000},
+			{"user-config", 0x3d0000, 0x10000},
+			{"default-config", 0x3e0000, 0x10000},
+			{"radio", 0x3f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	/** Firmware layout for the TL-WR1043 v5 */
+	{
+		.id     = "TLWR1043NV5",
+		.vendor = "",
+		.support_list =
+			"SupportList:\n"
+			"{product_name:TL-WR1043N,product_ver:5.0.0,special_id:45550000}\n"
+			"{product_name:TL-WR1043N,product_ver:5.0.0,special_id:55530000}\n",
+		.support_trail = '\x00',
+		.soft_ver = "soft_ver:1.0.0\n",
+		.partitions = {
+			{"factory-boot", 0x00000, 0x20000},
+			{"fs-uboot", 0x20000, 0x20000},
+			{"os-image", 0x40000, 0x180000},
+			{"file-system", 0x1c0000, 0xd40000},
+			{"default-mac", 0xf00000, 0x00200},
+			{"pin", 0xf00200, 0x00200},
+			{"device-id", 0xf00400, 0x00100},
+			{"product-info", 0xf00500, 0x0fb00},
+			{"soft-version", 0xf10000, 0x01000},
+			{"extra-para", 0xf11000, 0x01000},
+			{"support-list", 0xf12000, 0x0a000},
+			{"profile", 0xf1c000, 0x04000},
+			{"default-config", 0xf20000, 0x10000},
+			{"user-config", 0xf30000, 0x40000},
+			{"qos-db", 0xf70000, 0x40000},
+			{"certificate", 0xfb0000, 0x10000},
+			{"partition-table", 0xfc0000, 0x10000},
+			{"log", 0xfd0000, 0x20000},
+			{"radio", 0xff0000, 0x10000},
+			{NULL, 0, 0}
+		},
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	/** Firmware layout for the TL-WR1043 v4 */
+	{
+		.id     = "TLWR1043NDV4",
+		.vendor = "",
+		.support_list =
+			"SupportList:\n"
+			"{product_name:TL-WR1043ND,product_ver:4.0.0,special_id:45550000}\n",
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		/**
+		    We use a bigger os-image partition than the stock images (and thus
+		    smaller file-system), as our kernel doesn't fit in the stock firmware's
+		    1MB os-image.
+		*/
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"os-image", 0x20000, 0x180000},
+			{"file-system", 0x1a0000, 0xdb0000},
+			{"default-mac", 0xf50000, 0x00200},
+			{"pin", 0xf50200, 0x00200},
+			{"product-info", 0xf50400, 0x0fc00},
+			{"soft-version", 0xf60000, 0x0b000},
+			{"support-list", 0xf6b000, 0x04000},
+			{"profile", 0xf70000, 0x04000},
+			{"default-config", 0xf74000, 0x0b000},
+			{"user-config", 0xf80000, 0x40000},
+			{"partition-table", 0xfc0000, 0x10000},
+			{"log", 0xfd0000, 0x20000},
+			{"radio", 0xff0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	/** Firmware layout for the TL-WR902AC v1 */
+	{
+		.id     = "TL-WR902AC-V1",
+		.vendor = "",
+		.support_list =
+			"SupportList:\n"
+			"{product_name:TL-WR902AC,product_ver:1.0.0,special_id:45550000}\n"
+			"{product_name:TL-WR902AC,product_ver:1.0.0,special_id:55530000}\n",
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		/**
+		   384KB were moved from file-system to os-image
+		   in comparison to the stock image
+		*/
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"os-image", 0x20000, 0x180000},
+			{"file-system", 0x1a0000, 0x5b0000},
+			{"default-mac", 0x750000, 0x00200},
+			{"pin", 0x750200, 0x00200},
+			{"product-info", 0x750400, 0x0fc00},
+			{"soft-version", 0x760000, 0x0b000},
+			{"support-list", 0x76b000, 0x04000},
+			{"profile", 0x770000, 0x04000},
+			{"default-config", 0x774000, 0x0b000},
+			{"user-config", 0x780000, 0x40000},
+			{"partition-table", 0x7c0000, 0x10000},
+			{"log", 0x7d0000, 0x20000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	/** Firmware layout for the TL-WR942N V1 */
+	{
+		.id     = "TLWR942NV1",
+		.vendor = "",
+		.support_list =
+			"SupportList:\r\n"
+			"{product_name:TL-WR942N,product_ver:1.0.0,special_id:00000000}\r\n"
+			"{product_name:TL-WR942N,product_ver:1.0.0,special_id:52550000}\r\n",
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"os-image", 0x20000, 0x180000},
+			{"file-system", 0x1a0000, 0xca0000},
+			{"default-mac", 0xe40000, 0x00200},
+			{"pin", 0xe40200, 0x00200},
+			{"product-info", 0xe40400, 0x0fc00},
+			{"partition-table", 0xe50000, 0x10000},
+			{"soft-version", 0xe60000, 0x10000},
+			{"support-list", 0xe70000, 0x10000},
+			{"profile", 0xe80000, 0x10000},
+			{"default-config", 0xe90000, 0x10000},
+			{"user-config", 0xea0000, 0x40000},
+			{"qos-db", 0xee0000, 0x40000},
+			{"certificate", 0xf20000, 0x10000},
+			{"usb-config", 0xfb0000, 0x10000},
+			{"log", 0xfc0000, 0x20000},
+			{"radio-bk", 0xfe0000, 0x10000},
+			{"radio", 0xff0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system",
+	},
+
+	/** Firmware layout for the RE350 v1 */
+	{
+		.id = "RE350-V1",
+		.vendor = "",
+		.support_list =
+			"SupportList:\n"
+			"{product_name:RE350,product_ver:1.0.0,special_id:45550000}\n"
+			"{product_name:RE350,product_ver:1.0.0,special_id:00000000}\n"
+			"{product_name:RE350,product_ver:1.0.0,special_id:41550000}\n"
+			"{product_name:RE350,product_ver:1.0.0,special_id:55530000}\n"
+			"{product_name:RE350,product_ver:1.0.0,special_id:43410000}\n"
+			"{product_name:RE350,product_ver:1.0.0,special_id:4b520000}\n"
+			"{product_name:RE350,product_ver:1.0.0,special_id:4a500000}\n",
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		/**
+			The original os-image partition is too small,
+			so we enlarge it to 1.6M
+		*/
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"os-image", 0x20000, 0x1a0000},
+			{"file-system", 0x1c0000, 0x440000},
+			{"partition-table", 0x600000, 0x02000},
+			{"default-mac", 0x610000, 0x00020},
+			{"pin", 0x610100, 0x00020},
+			{"product-info", 0x611100, 0x01000},
+			{"soft-version", 0x620000, 0x01000},
+			{"support-list", 0x621000, 0x01000},
+			{"profile", 0x622000, 0x08000},
+			{"user-config", 0x630000, 0x10000},
+			{"default-config", 0x640000, 0x10000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	/** Firmware layout for the RE450 */
+	{
+		.id = "RE450",
+		.vendor = "",
+		.support_list =
+			"SupportList:\r\n"
+			"{product_name:RE450,product_ver:1.0.0,special_id:00000000}\r\n"
+			"{product_name:RE450,product_ver:1.0.0,special_id:55530000}\r\n"
+			"{product_name:RE450,product_ver:1.0.0,special_id:45550000}\r\n"
+			"{product_name:RE450,product_ver:1.0.0,special_id:4A500000}\r\n"
+			"{product_name:RE450,product_ver:1.0.0,special_id:43410000}\r\n"
+			"{product_name:RE450,product_ver:1.0.0,special_id:41550000}\r\n"
+			"{product_name:RE450,product_ver:1.0.0,special_id:4B520000}\r\n"
+			"{product_name:RE450,product_ver:1.0.0,special_id:55534100}\r\n",
+		.support_trail = '\x00',
+		.soft_ver = NULL,
+
+		/**
+		   The flash partition table for RE450;
+		   it is almost the same as the one used by the stock images,
+		   576KB were moved from file-system to os-image.
+		*/
+		.partitions = {
+			{"fs-uboot", 0x00000, 0x20000},
+			{"os-image", 0x20000, 0x180000},
+			{"file-system", 0x1a0000, 0x460000},
+			{"partition-table", 0x600000, 0x02000},
+			{"default-mac", 0x610000, 0x00020},
+			{"pin", 0x610100, 0x00020},
+			{"product-info", 0x611100, 0x01000},
+			{"soft-version", 0x620000, 0x01000},
+			{"support-list", 0x621000, 0x01000},
+			{"profile", 0x622000, 0x08000},
+			{"user-config", 0x630000, 0x10000},
+			{"default-config", 0x640000, 0x10000},
+			{"radio", 0x7f0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.first_sysupgrade_partition = "os-image",
+		.last_sysupgrade_partition = "file-system"
+	},
+
+	{}
 };
-
-/**
-   The support list for CPE210/220/510/520
-*/
-static const char cpe510_support_list[] =
-	"SupportList:\r\n"
-	"CPE510(TP-LINK|UN|N300-5):1.0\r\n"
-	"CPE510(TP-LINK|UN|N300-5):1.1\r\n"
-	"CPE520(TP-LINK|UN|N300-5):1.0\r\n"
-	"CPE520(TP-LINK|UN|N300-5):1.1\r\n"
-	"CPE210(TP-LINK|UN|N300-2):1.0\r\n"
-	"CPE210(TP-LINK|UN|N300-2):1.1\r\n"
-	"CPE220(TP-LINK|UN|N300-2):1.0\r\n"
-	"CPE220(TP-LINK|UN|N300-2):1.1\r\n";
 
 #define error(_ret, _errno, _str, ...)				\
 	do {							\
@@ -170,6 +946,20 @@ static struct image_partition_entry alloc_image_partition(const char *name, size
 /** Frees an image partition */
 static void free_image_partition(struct image_partition_entry entry) {
 	free(entry.data);
+}
+
+static time_t source_date_epoch = -1;
+static void set_source_date_epoch() {
+	char *env = getenv("SOURCE_DATE_EPOCH");
+	char *endptr = env;
+	errno = 0;
+        if (env && *env) {
+		source_date_epoch = strtoull(env, &endptr, 10);
+		if (errno || (endptr && *endptr != '\0')) {
+			fprintf(stderr, "Invalid SOURCE_DATE_EPOCH");
+			exit(1);
+		}
+        }
 }
 
 /** Generates the partition-table partition */
@@ -215,7 +1005,9 @@ static struct image_partition_entry make_soft_version(uint32_t rev) {
 
 	time_t t;
 
-	if (time(&t) == (time_t)(-1))
+	if (source_date_epoch != -1)
+		t = source_date_epoch;
+	else if (time(&t) == (time_t)(-1))
 		error(1, errno, "time");
 
 	struct tm *tm = localtime(&t);
@@ -239,15 +1031,32 @@ static struct image_partition_entry make_soft_version(uint32_t rev) {
 	return entry;
 }
 
+static struct image_partition_entry make_soft_version_from_string(const char *soft_ver) {
+	/** String length _including_ the terminating zero byte */
+	uint32_t ver_len = strlen(soft_ver) + 1;
+	/** Partition contains 64 bit header, the version string, and one additional null byte */
+	size_t partition_len = 2*sizeof(uint32_t) + ver_len + 1;
+	struct image_partition_entry entry = alloc_image_partition("soft-version", partition_len);
+
+	uint32_t *len = (uint32_t *)entry.data;
+	len[0] = htonl(ver_len);
+	len[1] = 0;
+	memcpy(&len[2], soft_ver, ver_len);
+
+	entry.data[partition_len - 1] = 0;
+
+	return entry;
+}
+
 /** Generates the support-list partition */
-static struct image_partition_entry make_support_list(const char *support_list) {
-	size_t len = strlen(support_list);
+static struct image_partition_entry make_support_list(const struct device_info *info) {
+	size_t len = strlen(info->support_list);
 	struct image_partition_entry entry = alloc_image_partition("support-list", len + 9);
 
 	put32(entry.data, len);
 	memset(entry.data+4, 0, 4);
-	memcpy(entry.data+8, support_list, len);
-	entry.data[len+8] = '\xff';
+	memcpy(entry.data+8, info->support_list, len);
+	entry.data[len+8] = info->support_trail;
 
 	return entry;
 }
@@ -285,6 +1094,15 @@ static struct image_partition_entry read_file(const char *part_name, const char 
 	return entry;
 }
 
+/** Creates a new image partition from arbitrary data */
+static struct image_partition_entry put_data(const char *part_name, const char *datain, size_t len) {
+
+	struct image_partition_entry entry = alloc_image_partition(part_name, len);
+
+	memcpy(entry.data, datain, len);
+
+	return entry;
+}
 
 /**
    Copies a list of image partitions into an image buffer and generates the image partition table while doing so
@@ -313,12 +1131,22 @@ static struct image_partition_entry read_file(const char *part_name, const char 
 
    I think partition-table must be the first partition in the firmware image.
 */
-static void put_partitions(uint8_t *buffer, const struct image_partition_entry *parts) {
-	size_t i;
+static void put_partitions(uint8_t *buffer, const struct flash_partition_entry *flash_parts, const struct image_partition_entry *parts) {
+	size_t i, j;
 	char *image_pt = (char *)buffer, *end = image_pt + 0x800;
 
 	size_t base = 0x800;
 	for (i = 0; parts[i].name; i++) {
+		for (j = 0; flash_parts[j].name; j++) {
+			if (!strcmp(flash_parts[j].name, parts[i].name)) {
+				if (parts[i].size > flash_parts[j].size)
+					error(1, 0, "%s partition too big (more than %u bytes)", flash_parts[j].name, (unsigned)flash_parts[j].size);
+				break;
+			}
+		}
+
+		assert(flash_parts[j].name);
+
 		memcpy(buffer + base, parts[i].data, parts[i].size);
 
 		size_t len = end-image_pt;
@@ -331,10 +1159,6 @@ static void put_partitions(uint8_t *buffer, const struct image_partition_entry *
 
 		base += parts[i].size;
 	}
-
-	image_pt++;
-
-	memset(image_pt, 0xff, end-image_pt);
 }
 
 /** Generates and writes the image MD5 checksum */
@@ -363,7 +1187,7 @@ static void put_md5(uint8_t *md5, uint8_t *buffer, unsigned int len) {
      1014-1813    Image partition table (2048 bytes, padded with 0xff)
      1814-xxxx    Firmware partitions
 */
-static void * generate_factory_image(const char *vendor, const struct image_partition_entry *parts, size_t *len) {
+static void * generate_factory_image(const struct device_info *info, const struct image_partition_entry *parts, size_t *len) {
 	*len = 0x1814;
 
 	size_t i;
@@ -374,14 +1198,16 @@ static void * generate_factory_image(const char *vendor, const struct image_part
 	if (!image)
 		error(1, errno, "malloc");
 
+	memset(image, 0xff, *len);
 	put32(image, *len);
 
-	size_t vendor_len = strlen(vendor);
-	put32(image+0x14, vendor_len);
-	memcpy(image+0x18, vendor, vendor_len);
-	memset(image+0x18+vendor_len, 0xff, 4092-vendor_len);
+	if (info->vendor) {
+		size_t vendor_len = strlen(info->vendor);
+		put32(image+0x14, vendor_len);
+		memcpy(image+0x18, info->vendor, vendor_len);
+	}
 
-	put_partitions(image + 0x1014, parts);
+	put_partitions(image + 0x1014, info->partitions, parts);
 	put_md5(image+0x04, image+0x14, *len-0x14);
 
 	return image;
@@ -394,33 +1220,39 @@ static void * generate_factory_image(const char *vendor, const struct image_part
    should be generalized when TP-LINK starts building its safeloader into hardware with
    different flash layouts.
 */
-static void * generate_sysupgrade_image(const struct flash_partition_entry *flash_parts, const struct image_partition_entry *image_parts, size_t *len) {
-	const struct flash_partition_entry *flash_os_image = &flash_parts[5];
-	const struct flash_partition_entry *flash_soft_version = &flash_parts[6];
-	const struct flash_partition_entry *flash_support_list = &flash_parts[7];
-	const struct flash_partition_entry *flash_file_system = &flash_parts[8];
+static void * generate_sysupgrade_image(const struct device_info *info, const struct image_partition_entry *image_parts, size_t *len) {
+	size_t i, j;
+	size_t flash_first_partition_index = 0;
+	size_t flash_last_partition_index = 0;
+	const struct flash_partition_entry *flash_first_partition = NULL;
+	const struct flash_partition_entry *flash_last_partition = NULL;
+	const struct image_partition_entry *image_last_partition = NULL;
 
-	const struct image_partition_entry *image_os_image = &image_parts[3];
-	const struct image_partition_entry *image_soft_version = &image_parts[1];
-	const struct image_partition_entry *image_support_list = &image_parts[2];
-	const struct image_partition_entry *image_file_system = &image_parts[4];
+	/** Find first and last partitions */
+	for (i = 0; info->partitions[i].name; i++) {
+		if (!strcmp(info->partitions[i].name, info->first_sysupgrade_partition)) {
+			flash_first_partition = &info->partitions[i];
+			flash_first_partition_index = i;
+		} else if (!strcmp(info->partitions[i].name, info->last_sysupgrade_partition)) {
+			flash_last_partition = &info->partitions[i];
+			flash_last_partition_index = i;
+		}
+	}
 
-	assert(strcmp(flash_os_image->name, "os-image") == 0);
-	assert(strcmp(flash_soft_version->name, "soft-version") == 0);
-	assert(strcmp(flash_support_list->name, "support-list") == 0);
-	assert(strcmp(flash_file_system->name, "file-system") == 0);
+	assert(flash_first_partition && flash_last_partition);
+	assert(flash_first_partition_index < flash_last_partition_index);
 
-	assert(strcmp(image_os_image->name, "os-image") == 0);
-	assert(strcmp(image_soft_version->name, "soft-version") == 0);
-	assert(strcmp(image_support_list->name, "support-list") == 0);
-	assert(strcmp(image_file_system->name, "file-system") == 0);
+	/** Find last partition from image to calculate needed size */
+	for (i = 0; image_parts[i].name; i++) {
+		if (!strcmp(image_parts[i].name, info->last_sysupgrade_partition)) {
+			image_last_partition = &image_parts[i];
+			break;
+		}
+	}
 
-	if (image_os_image->size > flash_os_image->size)
-		error(1, 0, "kernel image too big (more than %u bytes)", (unsigned)flash_os_image->size);
-	if (image_file_system->size > flash_file_system->size)
-		error(1, 0, "rootfs image too big (more than %u bytes)", (unsigned)flash_file_system->size);
+	assert(image_last_partition);
 
-	*len = flash_file_system->base - flash_os_image->base + image_file_system->size;
+	*len = flash_last_partition->base - flash_first_partition->base + image_last_partition->size;
 
 	uint8_t *image = malloc(*len);
 	if (!image)
@@ -428,31 +1260,59 @@ static void * generate_sysupgrade_image(const struct flash_partition_entry *flas
 
 	memset(image, 0xff, *len);
 
-	memcpy(image, image_os_image->data, image_os_image->size);
-	memcpy(image + flash_soft_version->base - flash_os_image->base, image_soft_version->data, image_soft_version->size);
-	memcpy(image + flash_support_list->base - flash_os_image->base, image_support_list->data, image_support_list->size);
-	memcpy(image + flash_file_system->base - flash_os_image->base, image_file_system->data, image_file_system->size);
+	for (i = flash_first_partition_index; i <= flash_last_partition_index; i++) {
+		for (j = 0; image_parts[j].name; j++) {
+			if (!strcmp(info->partitions[i].name, image_parts[j].name)) {
+				if (image_parts[j].size > info->partitions[i].size)
+					error(1, 0, "%s partition too big (more than %u bytes)", info->partitions[i].name, (unsigned)info->partitions[i].size);
+				memcpy(image + info->partitions[i].base - flash_first_partition->base, image_parts[j].data, image_parts[j].size);
+				break;
+			}
+
+			assert(image_parts[j].name);
+		}
+	}
 
 	return image;
 }
 
+/** Generates an image according to a given layout and writes it to a file */
+static void build_image(const char *output,
+		const char *kernel_image,
+		const char *rootfs_image,
+		uint32_t rev,
+		bool add_jffs2_eof,
+		bool sysupgrade,
+		const struct device_info *info) {
 
-/** Generates an image for CPE210/220/510/520 and writes it to a file */
-static void do_cpe510(const char *output, const char *kernel_image, const char *rootfs_image, uint32_t rev, bool add_jffs2_eof, bool sysupgrade) {
-	struct image_partition_entry parts[6] = {};
+	struct image_partition_entry parts[7] = {};
 
-	parts[0] = make_partition_table(cpe510_partitions);
-	parts[1] = make_soft_version(rev);
-	parts[2] = make_support_list(cpe510_support_list);
+	parts[0] = make_partition_table(info->partitions);
+	if (info->soft_ver)
+		parts[1] = make_soft_version_from_string(info->soft_ver);
+	else
+		parts[1] = make_soft_version(rev);
+
+	parts[2] = make_support_list(info);
 	parts[3] = read_file("os-image", kernel_image, false);
 	parts[4] = read_file("file-system", rootfs_image, add_jffs2_eof);
+
+	/* Some devices need the extra-para partition to accept the firmware */
+	if (strcasecmp(info->id, "ARCHER-C25-V1") == 0 ||
+	    strcasecmp(info->id, "TLWR1043NV5") == 0) {
+		const char mdat[11] = {0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00};
+		parts[5] = put_data("extra-para", mdat, 11);
+	} else if (strcasecmp(info->id, "ARCHER-C7-V4") == 0) {
+		const char mdat[11] = {0x01, 0x00, 0x00, 0x02, 0x00, 0x00, 0xca, 0x00, 0x01, 0x00, 0x00};
+		parts[5] = put_data("extra-para", mdat, 11);
+	}
 
 	size_t len;
 	void *image;
 	if (sysupgrade)
-		image = generate_sysupgrade_image(cpe510_partitions, parts, &len);
+		image = generate_sysupgrade_image(info, parts, &len);
 	else
-		image = generate_factory_image(cpe510_vendor, parts, &len);
+		image = generate_factory_image(info, parts, &len);
 
 	FILE *file = fopen(output, "wb");
 	if (!file)
@@ -469,7 +1329,6 @@ static void do_cpe510(const char *output, const char *kernel_image, const char *
 	for (i = 0; parts[i].name; i++)
 		free_image_partition(parts[i]);
 }
-
 
 /** Usage output */
 static void usage(const char *argv0) {
@@ -490,10 +1349,23 @@ static void usage(const char *argv0) {
 };
 
 
+static const struct device_info *find_board(const char *id)
+{
+	struct device_info *board = NULL;
+
+	for (board = boards; board->id != NULL; board++)
+		if (strcasecmp(id, board->id) == 0)
+			return board;
+
+	return NULL;
+}
+
 int main(int argc, char *argv[]) {
 	const char *board = NULL, *kernel_image = NULL, *rootfs_image = NULL, *output = NULL;
 	bool add_jffs2_eof = false, sysupgrade = false;
 	unsigned rev = 0;
+	const struct device_info *info;
+	set_source_date_epoch();
 
 	while (true) {
 		int c;
@@ -550,10 +1422,12 @@ int main(int argc, char *argv[]) {
 	if (!output)
 		error(1, 0, "no output filename has been specified");
 
-	if (strcmp(board, "CPE510") == 0)
-		do_cpe510(output, kernel_image, rootfs_image, rev, add_jffs2_eof, sysupgrade);
-	else
+	info = find_board(board);
+
+	if (info == NULL)
 		error(1, 0, "unsupported board %s", board);
+
+	build_image(output, kernel_image, rootfs_image, rev, add_jffs2_eof, sysupgrade, info);
 
 	return 0;
 }

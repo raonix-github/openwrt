@@ -11,7 +11,8 @@ PKG_NAME:=ltq-ptm
 PKG_RELEASE:=1
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/ltq-ptm-$(BUILD_VARIANT)
 
-PKG_MAINTAINER:=John Crispin <blogic@openwrt.org>
+PKG_MAINTAINER:=John Crispin <john@phrozen.org>
+PKG_LICENSE:=GPL-2.0+
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -23,6 +24,14 @@ define KernelPackage/ltq-ptm-template
   URL:=http://www.lantiq.com/
   VARIANT:=$(1)
   DEPENDS:=@TARGET_lantiq_$(2)
+ifeq ($(1),vr9)
+  DEPENDS+= +kmod-ltq-vdsl-vr9-mei
+else
+  DEPENDS+= +kmod-ltq-adsl-$(1)-mei
+endif
+ifeq ($(1),ase)
+  DEPENDS+=@BROKEN
+endif
   FILES:=$(PKG_BUILD_DIR)/ltq_ptm_$(1).ko 
 endef
 
@@ -30,11 +39,6 @@ KernelPackage/ltq-ptm-danube=$(call KernelPackage/ltq-ptm-template,danube,xway)
 KernelPackage/ltq-ptm-ar9=$(call KernelPackage/ltq-ptm-template,ar9,xway)
 KernelPackage/ltq-ptm-ase=$(call KernelPackage/ltq-ptm-template,ase,ase)
 KernelPackage/ltq-ptm-vr9=$(call KernelPackage/ltq-ptm-template,vr9,xrx200)
-
-define Build/Prepare
-	$(INSTALL_DIR) $(PKG_BUILD_DIR)
-	$(CP) ./src/* $(PKG_BUILD_DIR)
-endef
 
 define Build/Configure
 endef

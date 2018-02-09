@@ -407,48 +407,14 @@ static void ath79_set_speed_dummy(int speed)
 {
 }
 
-static void ath79_ddr_no_flush(void)
-{
-}
-
 static void ath79_ddr_flush_ge0(void)
 {
-	ath79_ddr_wb_flush(AR71XX_DDR_REG_FLUSH_GE0);
+	ath79_ddr_wb_flush(0);
 }
 
 static void ath79_ddr_flush_ge1(void)
 {
-	ath79_ddr_wb_flush(AR71XX_DDR_REG_FLUSH_GE1);
-}
-
-static void ar724x_ddr_flush_ge0(void)
-{
-	ath79_ddr_wb_flush(AR724X_DDR_REG_FLUSH_GE0);
-}
-
-static void ar724x_ddr_flush_ge1(void)
-{
-	ath79_ddr_wb_flush(AR724X_DDR_REG_FLUSH_GE1);
-}
-
-static void ar91xx_ddr_flush_ge0(void)
-{
-	ath79_ddr_wb_flush(AR913X_DDR_REG_FLUSH_GE0);
-}
-
-static void ar91xx_ddr_flush_ge1(void)
-{
-	ath79_ddr_wb_flush(AR913X_DDR_REG_FLUSH_GE1);
-}
-
-static void ar933x_ddr_flush_ge0(void)
-{
-	ath79_ddr_wb_flush(AR933X_DDR_REG_FLUSH_GE0);
-}
-
-static void ar933x_ddr_flush_ge1(void)
-{
-	ath79_ddr_wb_flush(AR933X_DDR_REG_FLUSH_GE1);
+	ath79_ddr_wb_flush(1);
 }
 
 static struct resource ath79_eth0_resources[] = {
@@ -720,7 +686,6 @@ static int __init ath79_setup_phy_if_mode(unsigned int id,
 		case ATH79_SOC_AR7241:
 		case ATH79_SOC_AR9330:
 		case ATH79_SOC_AR9331:
-		case ATH79_SOC_QCA956X:
 		case ATH79_SOC_TP9343:
 			pdata->phy_if_mode = PHY_INTERFACE_MODE_GMII;
 			break;
@@ -732,6 +697,7 @@ static int __init ath79_setup_phy_if_mode(unsigned int id,
 		case ATH79_SOC_AR9342:
 		case ATH79_SOC_AR9344:
 		case ATH79_SOC_QCA9533:
+		case ATH79_SOC_QCA956X:
 			switch (pdata->phy_if_mode) {
 			case PHY_INTERFACE_MODE_MII:
 			case PHY_INTERFACE_MODE_GMII:
@@ -848,6 +814,27 @@ void __init ath79_setup_qca955x_eth_cfg(u32 mask)
 	iounmap(base);
 }
 
+void __init ath79_setup_qca956x_eth_cfg(u32 mask)
+{
+	void __iomem *base;
+	u32 t;
+
+	base = ioremap(QCA956X_GMAC_BASE, QCA956X_GMAC_SIZE);
+
+	t = __raw_readl(base + QCA956X_GMAC_REG_ETH_CFG);
+
+	t &= ~(QCA956X_ETH_CFG_SW_ONLY_MODE |
+	       QCA956X_ETH_CFG_SW_PHY_SWAP);
+
+	t |= mask;
+
+	__raw_writel(t, base + QCA956X_GMAC_REG_ETH_CFG);
+	/* flush write */
+	__raw_readl(base + QCA956X_GMAC_REG_ETH_CFG);
+
+	iounmap(base);
+}
+
 static int ath79_eth_instance __initdata;
 void __init ath79_register_eth(unsigned int id)
 {
@@ -879,26 +866,25 @@ void __init ath79_register_eth(unsigned int id)
 		return;
 	}
 
+	if (id == 0)
+		pdata->ddr_flush = ath79_ddr_flush_ge0;
+	else
+		pdata->ddr_flush = ath79_ddr_flush_ge1;
+
 	switch (ath79_soc) {
 	case ATH79_SOC_AR7130:
-		if (id == 0) {
-			pdata->ddr_flush = ath79_ddr_flush_ge0;
+		if (id == 0)
 			pdata->set_speed = ath79_set_speed_ge0;
-		} else {
-			pdata->ddr_flush = ath79_ddr_flush_ge1;
+		else
 			pdata->set_speed = ath79_set_speed_ge1;
-		}
 		break;
 
 	case ATH79_SOC_AR7141:
 	case ATH79_SOC_AR7161:
-		if (id == 0) {
-			pdata->ddr_flush = ath79_ddr_flush_ge0;
+		if (id == 0)
 			pdata->set_speed = ath79_set_speed_ge0;
-		} else {
-			pdata->ddr_flush = ath79_ddr_flush_ge1;
+		else
 			pdata->set_speed = ath79_set_speed_ge1;
-		}
 		pdata->has_gbit = 1;
 		break;
 
@@ -906,12 +892,10 @@ void __init ath79_register_eth(unsigned int id)
 		if (id == 0) {
 			pdata->reset_bit |= AR724X_RESET_GE0_MDIO |
 					    AR71XX_RESET_GE0_PHY;
-			pdata->ddr_flush = ar724x_ddr_flush_ge0;
 			pdata->set_speed = ar7242_set_speed_ge0;
 		} else {
 			pdata->reset_bit |= AR724X_RESET_GE1_MDIO |
 					    AR71XX_RESET_GE1_PHY;
-			pdata->ddr_flush = ar724x_ddr_flush_ge1;
 			pdata->set_speed = ath79_set_speed_dummy;
 		}
 		pdata->has_gbit = 1;
@@ -934,18 +918,17 @@ void __init ath79_register_eth(unsigned int id)
 	case ATH79_SOC_AR7240:
 		if (id == 0) {
 			pdata->reset_bit |= AR71XX_RESET_GE0_PHY;
-			pdata->ddr_flush = ar724x_ddr_flush_ge0;
 			pdata->set_speed = ath79_set_speed_dummy;
 
 			pdata->phy_mask = BIT(4);
 		} else {
 			pdata->reset_bit |= AR71XX_RESET_GE1_PHY;
-			pdata->ddr_flush = ar724x_ddr_flush_ge1;
 			pdata->set_speed = ath79_set_speed_dummy;
 
 			pdata->speed = SPEED_1000;
 			pdata->duplex = DUPLEX_FULL;
 			pdata->switch_data = &ath79_switch_data;
+			pdata->use_flow_control = 1;
 
 			ath79_switch_data.phy_poll_mask |= BIT(4);
 		}
@@ -962,27 +945,15 @@ void __init ath79_register_eth(unsigned int id)
 			pdata->fifo_cfg3 = 0x01f00140;
 		break;
 
-	case ATH79_SOC_AR9130:
-		if (id == 0) {
-			pdata->ddr_flush = ar91xx_ddr_flush_ge0;
-			pdata->set_speed = ar91xx_set_speed_ge0;
-		} else {
-			pdata->ddr_flush = ar91xx_ddr_flush_ge1;
-			pdata->set_speed = ar91xx_set_speed_ge1;
-		}
-		pdata->is_ar91xx = 1;
-		break;
-
 	case ATH79_SOC_AR9132:
-		if (id == 0) {
-			pdata->ddr_flush = ar91xx_ddr_flush_ge0;
-			pdata->set_speed = ar91xx_set_speed_ge0;
-		} else {
-			pdata->ddr_flush = ar91xx_ddr_flush_ge1;
-			pdata->set_speed = ar91xx_set_speed_ge1;
-		}
-		pdata->is_ar91xx = 1;
 		pdata->has_gbit = 1;
+		/* fall through */
+	case ATH79_SOC_AR9130:
+		if (id == 0)
+			pdata->set_speed = ar91xx_set_speed_ge0;
+		else
+			pdata->set_speed = ar91xx_set_speed_ge1;
+		pdata->is_ar91xx = 1;
 		break;
 
 	case ATH79_SOC_AR9330:
@@ -990,20 +961,19 @@ void __init ath79_register_eth(unsigned int id)
 		if (id == 0) {
 			pdata->reset_bit = AR933X_RESET_GE0_MAC |
 					   AR933X_RESET_GE0_MDIO;
-			pdata->ddr_flush = ar933x_ddr_flush_ge0;
 			pdata->set_speed = ath79_set_speed_dummy;
 
 			pdata->phy_mask = BIT(4);
 		} else {
 			pdata->reset_bit = AR933X_RESET_GE1_MAC |
 					   AR933X_RESET_GE1_MDIO;
-			pdata->ddr_flush = ar933x_ddr_flush_ge1;
 			pdata->set_speed = ath79_set_speed_dummy;
 
 			pdata->speed = SPEED_1000;
 			pdata->has_gbit = 1;
 			pdata->duplex = DUPLEX_FULL;
 			pdata->switch_data = &ath79_switch_data;
+			pdata->use_flow_control = 1;
 
 			ath79_switch_data.phy_poll_mask |= BIT(4);
 		}
@@ -1026,6 +996,9 @@ void __init ath79_register_eth(unsigned int id)
 			pdata->reset_bit = AR934X_RESET_GE0_MAC |
 					   AR934X_RESET_GE0_MDIO;
 			pdata->set_speed = ar934x_set_speed_ge0;
+
+			if (ath79_soc == ATH79_SOC_QCA9533)
+				pdata->disable_inline_checksum_engine = 1;
 		} else {
 			pdata->reset_bit = AR934X_RESET_GE1_MAC |
 					   AR934X_RESET_GE1_MDIO;
@@ -1038,7 +1011,6 @@ void __init ath79_register_eth(unsigned int id)
 			ath79_device_reset_clear(AR934X_RESET_ETH_SWITCH);
 		}
 
-		pdata->ddr_flush = ath79_ddr_no_flush;
 		pdata->has_gbit = 1;
 		pdata->is_ar724x = 1;
 
@@ -1069,11 +1041,11 @@ void __init ath79_register_eth(unsigned int id)
 			pdata->speed = SPEED_1000;
 			pdata->duplex = DUPLEX_FULL;
 			pdata->switch_data = &ath79_switch_data;
+			pdata->use_flow_control = 1;
 
 			ath79_switch_data.phy_poll_mask |= BIT(4);
 		}
 
-		pdata->ddr_flush = ath79_ddr_no_flush;
 		pdata->has_gbit = 1;
 		pdata->is_ar724x = 1;
 
@@ -1097,7 +1069,6 @@ void __init ath79_register_eth(unsigned int id)
 			pdata->set_speed = qca955x_set_speed_sgmii;
 		}
 
-		pdata->ddr_flush = ath79_ddr_no_flush;
 		pdata->has_gbit = 1;
 		pdata->is_ar724x = 1;
 
@@ -1128,7 +1099,9 @@ void __init ath79_register_eth(unsigned int id)
 			if (pdata->phy_if_mode == PHY_INTERFACE_MODE_SGMII)
 				pdata->set_speed = qca956x_set_speed_sgmii;
 			else
-				pdata->set_speed = ath79_set_speed_ge0;
+				pdata->set_speed = ar934x_set_speed_ge0;
+
+			pdata->disable_inline_checksum_engine = 1;
 		} else {
 			pdata->reset_bit = QCA955X_RESET_GE1_MAC |
 					   QCA955X_RESET_GE1_MDIO;
@@ -1139,13 +1112,13 @@ void __init ath79_register_eth(unsigned int id)
 
 			pdata->speed = SPEED_1000;
 			pdata->duplex = DUPLEX_FULL;
+			pdata->use_flow_control = 1;
 
 			/* reset the built-in switch */
 			ath79_device_reset_set(AR934X_RESET_ETH_SWITCH);
 			ath79_device_reset_clear(AR934X_RESET_ETH_SWITCH);
 		}
 
-		pdata->ddr_flush = ath79_ddr_no_flush;
 		pdata->has_gbit = 1;
 		pdata->is_ar724x = 1;
 

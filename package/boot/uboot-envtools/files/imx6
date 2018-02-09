@@ -7,11 +7,10 @@
 
 touch /etc/config/ubootenv
 
-. /lib/imx6.sh
 . /lib/uboot-envtools.sh
 . /lib/functions.sh
 
-board=$(imx6_board_name)
+board=$(board_name)
 
 case "$board" in
 *gw5*)
@@ -25,7 +24,7 @@ case "$board" in
 		ubootenv_add_uci_config /dev/mmcblk0 0xd1400 0x20000 0x20000
 	fi
 	;;
-"wandboard")
+wandboard)
 	ubootenv_add_uci_config "/dev/mmcblk0" "0x60000" "0x2000" "0x2000"
 	;;
 esac

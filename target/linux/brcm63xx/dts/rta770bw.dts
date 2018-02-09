@@ -8,6 +8,11 @@
 	model = "Siemens Gigaset SE515";
 	compatible = "dynalink,rta770bw", "brcm,bcm6345";
 
+	chosen {
+		bootargs = "root=/dev/mtdblock2 rootfstype=squashfs,jffs2 noinitrd console=ttyS0,115200";
+		stdout-path = "serial0:115200n8";
+	};
+
 	gpio-keys-polled {
 		compatible = "gpio-keys-polled";
 		#address-cells = <1>;
@@ -67,4 +72,8 @@
 		label = "nvram";
 		reg = <0x3f0000 0x010000>;
 	};
+};
+
+&uart0 {
+	status = "ok";
 };

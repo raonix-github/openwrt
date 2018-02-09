@@ -5,7 +5,7 @@
 # See /LICENSE for more information.
 #
 
-PKG_DEFAULT_DEPENDS = +libc +SSP_SUPPORT:libssp +USE_GLIBC:librt +USE_GLIBC:libpthread
+PKG_DEFAULT_DEPENDS = +libc +GCC_LIBSSP:libssp +USE_GLIBC:librt +USE_GLIBC:libpthread
 
 ifneq ($(PKG_NAME),toolchain)
   PKG_FIXUP_DEPENDS = $(if $(filter kmod-%,$(1)),$(2),$(PKG_DEFAULT_DEPENDS) $(filter-out $(PKG_DEFAULT_DEPENDS),$(2)))
@@ -17,7 +17,6 @@ define Package/Default
   CONFIGFILE:=
   SECTION:=opt
   CATEGORY:=Extra packages
-  PACKAGE_SUBDIR:=$(FEED)
   DEPENDS:=
   MDEPENDS:=
   CONFLICTS:=
@@ -57,12 +56,16 @@ define Package/Default
   VARIANT:=
   DEFAULT_VARIANT:=
   USERID:=
+  ALTERNATIVES:=
+  LICENSE:=$(PKG_LICENSE)
+  LICENSE_FILES:=$(PKG_LICENSE_FILES)
 endef
 
 Build/Patch:=$(Build/Patch/Default)
 ifneq ($(strip $(PKG_UNPACK)),)
   define Build/Prepare/Default
 	$(PKG_UNPACK)
+	[ ! -d ./src/ ] || $(CP) ./src/* $(PKG_BUILD_DIR)
 	$(Build/Patch)
   endef
 endif
@@ -92,13 +95,12 @@ CONFIGURE_ARGS = \
 		--mandir=$(CONFIGURE_PREFIX)/man \
 		--infodir=$(CONFIGURE_PREFIX)/info \
 		$(DISABLE_NLS) \
-		$(DISABLE_LARGEFILE) \
 		$(DISABLE_IPV6)
 
 CONFIGURE_VARS = \
 		$(TARGET_CONFIGURE_OPTS) \
 		CFLAGS="$(TARGET_CFLAGS) $(EXTRA_CFLAGS)" \
-		CXXFLAGS="$(TARGET_CXXFLAGS) $(EXTRA_CFLAGS)" \
+		CXXFLAGS="$(TARGET_CXXFLAGS) $(EXTRA_CXXFLAGS)" \
 		CPPFLAGS="$(TARGET_CPPFLAGS) $(EXTRA_CPPFLAGS)" \
 		LDFLAGS="$(TARGET_LDFLAGS) $(EXTRA_LDFLAGS)" \
 
@@ -137,7 +139,7 @@ MAKE_INSTALL_FLAGS = \
 	$(MAKE_FLAGS) \
 	DESTDIR="$(PKG_INSTALL_DIR)"
 
-MAKE_PATH = .
+MAKE_PATH ?= .
 
 define Build/Compile/Default
 	+$(MAKE_VARS) \

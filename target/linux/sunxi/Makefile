@@ -10,12 +10,11 @@ include $(TOPDIR)/rules.mk
 ARCH:=arm
 BOARD:=sunxi
 BOARDNAME:=Allwinner A1x/A20/A3x
-FEATURES:=fpu usb ext4 display rtc
-CPU_TYPE:=cortex-a8
-CPU_SUBTYPE:=vfpv3
+FEATURES:=fpu usb ext4 display rtc squashfs
+SUBTARGETS:=cortexa8 cortexa7 cortexa53
 MAINTAINER:=Zoltan HERPAI <wigyori@uid0.hu>
 
-KERNEL_PATCHVER:=4.4
+KERNEL_PATCHVER:=4.9
 KERNELNAME:=zImage dtbs
 
 # A10: Cortex-A8
@@ -27,6 +26,7 @@ KERNELNAME:=zImage dtbs
 
 include $(INCLUDE_DIR)/target.mk
 
-DEFAULT_PACKAGES += uboot-envtools kmod-eeprom-sunxi kmod-wdt-sunxi
+DEFAULT_PACKAGES += uboot-envtools
+DEFAULT_PACKAGES += partx-utils mkf2fs e2fsprogs
 
 $(eval $(call BuildTarget))

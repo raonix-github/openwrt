@@ -10,7 +10,8 @@ PKG_NAME:=ltq-deu
 PKG_RELEASE:=1
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/ltq-deu-$(BUILD_VARIANT)
 
-PKG_MAINTAINER:=John Crispin <blogic@openwrt.org>
+PKG_MAINTAINER:=John Crispin <john@phrozen.org>
+PKG_LICENSE:=GPL-2.0+
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -29,11 +30,6 @@ endef
 KernelPackage/ltq-deu-danube=$(call KernelPackage/ltq-deu-template,danube,xway)
 KernelPackage/ltq-deu-ar9=$(call KernelPackage/ltq-deu-template,ar9,xway)
 KernelPackage/ltq-deu-vr9=$(call KernelPackage/ltq-deu-template,vr9,xrx200)
-
-define Build/Prepare
-	$(INSTALL_DIR) $(PKG_BUILD_DIR)
-	$(CP) ./src/* $(PKG_BUILD_DIR)
-endef
 
 define Build/Configure
 endef

@@ -26,30 +26,35 @@ PKG_VERSION:=$(firstword $(subst +, ,$(GCC_VERSION)))
 GCC_DIR:=$(PKG_NAME)-$(PKG_VERSION)
 
 PKG_SOURCE_URL:=@GNU/gcc/gcc-$(PKG_VERSION)
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 
-ifeq ($(PKG_VERSION),5.3.0)
-  PKG_MD5SUM:=c9616fd448f980259c31de613e575719
+ifeq ($(PKG_VERSION),5.5.0)
+  PKG_HASH:=530cea139d82fe542b358961130c69cfde8b3d14556370b65823d2f91f0ced87
 endif
 
-ifneq ($(CONFIG_GCC_VERSION_4_8_ARC),)
-    PKG_VERSION:=4.8.4
-    PKG_SOURCE_URL:=https://github.com/foss-for-synopsys-dwc-arc-processors/gcc/archive/arc-2015.06
+ifeq ($(PKG_VERSION),6.3.0)
+  PKG_HASH:=f06ae7f3f790fbf0f018f6d40e844451e6bc3b7bc96e128e63b09825c1f8b29f
+  PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
+endif
+
+ifeq ($(PKG_VERSION),7.3.0)
+  PKG_HASH:=832ca6ae04636adbb430e865a1451adf6979ab44ca1c8374f61fba65645ce15c
+endif
+
+ifneq ($(CONFIG_GCC_VERSION_7_1_ARC),)
+    PKG_VERSION:=7.1.1
+    PKG_SOURCE_URL:=https://github.com/foss-for-synopsys-dwc-arc-processors/gcc/archive/$(GCC_VERSION)
     PKG_SOURCE:=$(PKG_NAME)-$(GCC_VERSION).tar.gz
-    PKG_MD5SUM:=25007ebb02a5f6c32532b103bb5984a0
-    PKG_REV:=2015.06
+    PKG_HASH:=90596af8b9c26a434cec0a3b3d37d0c7c755ab6a65496af6ca32529fab5a6cfe
+    PKG_REV:=2017.09-release
     GCC_DIR:=gcc-arc-$(PKG_REV)
     HOST_BUILD_DIR = $(BUILD_DIR_HOST)/$(PKG_NAME)-$(GCC_VERSION)
 endif
 
 PATCH_DIR=../patches/$(GCC_VERSION)
 
-BUGURL=https://dev.openwrt.org/
-ifeq ($(findstring linaro, $(CONFIG_GCC_VERSION)),linaro)
-  PKGVERSION=OpenWrt/Linaro GCC $(PKG_REV) $(REVISION)
-else
-  PKGVERSION=OpenWrt GCC $(PKG_VERSION) $(REVISION)
-endif
+BUGURL=http://www.lede-project.org/bugs/
+PKGVERSION=OpenWrt GCC $(PKG_VERSION) $(REVISION)
 
 HOST_BUILD_PARALLEL:=1
 
@@ -66,24 +71,27 @@ endif
 HOST_STAMP_PREPARED:=$(HOST_BUILD_DIR)/.prepared
 HOST_STAMP_BUILT:=$(GCC_BUILD_DIR)/.built
 HOST_STAMP_CONFIGURED:=$(GCC_BUILD_DIR)/.configured
-HOST_STAMP_INSTALLED:=$(STAGING_DIR_HOST)/stamp/.gcc_$(GCC_VARIANT)_installed
+HOST_STAMP_INSTALLED:=$(HOST_BUILD_PREFIX)/stamp/.gcc_$(GCC_VARIANT)_installed
 
 SEP:=,
-TARGET_LANGUAGES:="c,c++$(if $(CONFIG_INSTALL_LIBGCJ),$(SEP)java)$(if $(CONFIG_INSTALL_GFORTRAN),$(SEP)fortran)"
+TARGET_LANGUAGES:="c,c++$(if $(CONFIG_INSTALL_GFORTRAN),$(SEP)fortran)$(if $(CONFIG_INSTALL_GCCGO),$(SEP)go)"
+
+TAR_OPTIONS += \
+	--exclude-from='$(CURDIR)/../exclude-testsuite' --exclude=gcc/ada/*.ad* \
+	--exclude=libjava
 
 export libgcc_cv_fixed_point=no
 ifdef CONFIG_USE_UCLIBC
   export glibcxx_cv_c99_math_tr1=no
 endif
+ifdef CONFIG_INSTALL_GCCGO
+  export libgo_cv_c_split_stack_supported=no
+endif
 
 ifdef CONFIG_GCC_USE_GRAPHITE
-  ifdef CONFIG_GCC_VERSION_4_8
-    GRAPHITE_CONFIGURE=--with-cloog=$(REAL_STAGING_DIR_HOST)
-  else
-    GRAPHITE_CONFIGURE=--with-isl=$(REAL_STAGING_DIR_HOST)
-  endif
+  GRAPHITE_CONFIGURE:= --with-isl=$(TOPDIR)/staging_dir/host
 else
-  GRAPHITE_CONFIGURE=--without-isl --without-cloog
+  GRAPHITE_CONFIGURE:= --without-isl --without-cloog
 endif
 
 GCC_CONFIGURE:= \
@@ -104,6 +112,7 @@ GCC_CONFIGURE:= \
 		--disable-libgomp \
 		--disable-libmudflap \
 		--disable-multilib \
+		--disable-libmpx \
 		--disable-nls \
 		$(GRAPHITE_CONFIGURE) \
 		--with-host-libstdcxx=-lstdc++ \
@@ -124,7 +133,17 @@ ifndef GCC_VERSION_4_8
   GCC_CONFIGURE += --with-diagnostics-color=auto-if-env
 endif
 
-ifneq ($(CONFIG_SSP_SUPPORT),)
+ifneq ($(CONFIG_GCC_DEFAULT_PIE),)
+  GCC_CONFIGURE+= \
+		--enable-default-pie
+endif
+
+ifneq ($(CONFIG_GCC_DEFAULT_SSP),)
+  GCC_CONFIGURE+= \
+		--enable-default-ssp
+endif
+
+ifneq ($(CONFIG_GCC_LIBSSP),)
   GCC_CONFIGURE+= \
 		--enable-libssp
 else
@@ -163,16 +182,41 @@ ifneq ($(CONFIG_SOFT_FLOAT),y)
   endif
 endif
 
+ifeq ($(CONFIG_TARGET_x86)$(CONFIG_USE_GLIBC)$(CONFIG_INSTALL_GCCGO),yyy)
+  TARGET_CFLAGS+=-fno-split-stack
+endif
+
 GCC_MAKE:= \
 	export SHELL="$(BASH)"; \
 	$(MAKE) \
 		CFLAGS="$(HOST_CFLAGS)" \
 		CFLAGS_FOR_TARGET="$(TARGET_CFLAGS)" \
-		CXXFLAGS_FOR_TARGET="$(TARGET_CFLAGS)"
+		CXXFLAGS_FOR_TARGET="$(TARGET_CFLAGS)" \
+		GOCFLAGS_FOR_TARGET="$(TARGET_CFLAGS)"
 
-define Host/Prepare
-	mkdir -p $(GCC_BUILD_DIR)
+define Host/SetToolchainInfo
+	$(SED) 's,TARGET_CROSS=.*,TARGET_CROSS=$(REAL_GNU_TARGET_NAME)-,' $(TOOLCHAIN_DIR)/info.mk
+	$(SED) 's,GCC_VERSION=.*,GCC_VERSION=$(GCC_VERSION),' $(TOOLCHAIN_DIR)/info.mk
 endef
+
+ifneq ($(GCC_PREPARE),)
+  define Host/Prepare
+	$(call Host/SetToolchainInfo)
+	$(call Host/Prepare/Default)
+	ln -snf $(GCC_DIR) $(BUILD_DIR_TOOLCHAIN)/$(PKG_NAME)
+	$(CP) $(SCRIPT_DIR)/config.{guess,sub} $(HOST_SOURCE_DIR)/
+	$(SED) 's,^MULTILIB_OSDIRNAMES,# MULTILIB_OSDIRNAMES,' $(HOST_SOURCE_DIR)/gcc/config/*/t-*
+	$(SED) 'd' $(HOST_SOURCE_DIR)/gcc/DEV-PHASE
+	$(SED) 's, DATESTAMP,,' $(HOST_SOURCE_DIR)/gcc/version.c
+	#(cd $(HOST_SOURCE_DIR)/libstdc++-v3; autoconf;);
+	$(SED) 's,gcc_no_link=yes,gcc_no_link=no,' $(HOST_SOURCE_DIR)/libstdc++-v3/configure
+	mkdir -p $(GCC_BUILD_DIR)
+  endef
+else
+  define Host/Prepare
+	mkdir -p $(GCC_BUILD_DIR)
+  endef
+endif
 
 define Host/Configure
 	(cd $(GCC_BUILD_DIR) && rm -f config.cache; \
@@ -181,9 +225,9 @@ define Host/Configure
 endef
 
 define Host/Clean
-	rm -rf \
-		$(STAGING_DIR_HOST)/stamp/.gcc_* \
-		$(STAGING_DIR_HOST)/stamp/.binutils_* \
+	rm -rf $(if $(GCC_PREPARE),$(HOST_SOURCE_DIR)) \
+		$(HOST_BUILD_PREFIX)/stamp/.gcc_* \
+		$(HOST_BUILD_PREFIX)/stamp/.binutils_* \
 		$(GCC_BUILD_DIR) \
 		$(BUILD_DIR_TOOLCHAIN)/$(PKG_NAME) \
 		$(TOOLCHAIN_DIR)/$(REAL_GNU_TARGET_NAME) \

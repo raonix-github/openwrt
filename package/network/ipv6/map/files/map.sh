@@ -86,15 +86,19 @@ proto_map_setup() {
 		json_add_string link $(eval "echo \$RULE_${k}_PD6IFACE")
 
 		if [ "$type" = "map-e" ]; then
-			json_add_array "fmrs"
+			json_add_object "data"
+				json_add_array "fmrs"
 				for i in $(seq $RULE_COUNT); do
 					[ "$(eval "echo \$RULE_${i}_FMR")" != 1 ] && continue
-					fmr="$(eval "echo \$RULE_${i}_IPV6PREFIX")/$(eval "echo \$RULE_${i}_PREFIX6LEN")"
-					fmr="$fmr,$(eval "echo \$RULE_${i}_IPV4PREFIX")/$(eval "echo \$RULE_${i}_PREFIX4LEN")"
-					fmr="$fmr,$(eval "echo \$RULE_${i}_EALEN"),$(eval "echo \$RULE_${i}_OFFSET")"
-					json_add_string "" "$fmr"
+					json_add_object ""
+					json_add_string prefix6 "$(eval "echo \$RULE_${i}_IPV6PREFIX")/$(eval "echo \$RULE_${i}_PREFIX6LEN")"
+					json_add_string prefix4 "$(eval "echo \$RULE_${i}_IPV4PREFIX")/$(eval "echo \$RULE_${i}_PREFIX4LEN")"
+					json_add_int ealen $(eval "echo \$RULE_${i}_EALEN")
+					json_add_int offset $(eval "echo \$RULE_${i}_OFFSET")
+					json_close_object
 				done
-			json_close_array
+				json_close_array
+			json_close_object
 		fi
 
 		proto_close_tunnel
@@ -192,7 +196,17 @@ proto_map_setup() {
 
 proto_map_teardown() {
 	local cfg="$1"
-	ifdown "${cfg}_"
+	local link="map-$cfg"
+
+	json_get_var type type
+
+	[ -z "$type" ] && type="map-e"
+
+	case "$type" in
+		"map-e"|"lw4o6") ifdown "${cfg}_" ;;
+		"map-t") [ -f "/proc/net/nat46/control" ] && echo del $link > /proc/net/nat46/control ;;
+	esac
+
 	rm -f /tmp/map-$cfg.rules
 }
 
@@ -206,6 +220,7 @@ proto_map_init_config() {
 	proto_config_add_string "ip6prefix"
 	proto_config_add_int "ip6prefixlen"
 	proto_config_add_string "peeraddr"
+	proto_config_add_int "ealen"
 	proto_config_add_int "psidlen"
 	proto_config_add_int "psid"
 	proto_config_add_int "offset"

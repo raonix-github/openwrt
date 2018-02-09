@@ -11,88 +11,44 @@ include $(INCLUDE_DIR)/image.mk
 # Images
 #################################################
 
-# build a ubi for a specific flash geometry/layout which can contain
-# volumes with the following data from ubinize-$(DEVICE_NAME).cfg:
-#   - 'boot.ubifs' volume: kernel+dtbs+bootscript
-#   - 'root.squashfs' volume: rootfs
-# $(1): name (used for suffix)
-# $(2): PAGESIZE (-m param to mkfs.ubifs/ubinize)
-# $(3): ERASESIZE (logical eraseblock size: -e param to mkfs.ubifs)
-# $(4): BLOCKSIZE (-p param to ubinize)
-# $(5): MAXSIZE (maximum file-system size in LEB's -c param to mkfs.ubifs)
-#
-define Build/ubi-boot-overlay
-	# ubi-boot-overlay $(DEVICE_NAME) $(word 1, $(1))
+DEVICE_VARS += MKUBIFS_OPTS
 
-	# boot filesystem
-	rm -rf $(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)_$(word 1, $(1))
-	mkdir -p $(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)_$(word 1, $(1))
-	$(CP) $< $(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)_$(word 1, $(1))/$(IMG_PREFIX)-uImage
-	ln -sf $(IMG_PREFIX)-uImage \
-		$(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)_$(word 1, $(1))/uImage
-	$(foreach dts,$(shell echo $(DEVICE_DTS)), \
-		$(CP) $(LINUX_DIR)/arch/$(ARCH)/boot/dts/$(dts).dtb \
-			$(BIN_DIR)/$(IMG_PREFIX)-$(dts).dtb; \
-		$(CP) $(LINUX_DIR)/arch/$(ARCH)/boot/dts/$(dts).dtb \
-			$(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)_$(word 1, $(1))/$(IMG_PREFIX)-$(dts).dtb; \
-		ln -sf $(IMG_PREFIX)-$(dts).dtb \
-			$(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)_$(word 1, $(1))/$(dts).dtb; \
+define Build/boot-overlay
+	rm -rf $@.boot
+	mkdir -p $@.boot
+
+	$(CP) $@ $@.boot/$(IMG_PREFIX)-uImage
+	ln -sf $(IMG_PREFIX)-uImage $@.boot/uImage
+
+	$(foreach dts,$(DEVICE_DTS), \
+		$(CP) \
+			$(LINUX_DIR)/arch/$(ARCH)/boot/dts/$(dts).dtb \
+			$@.boot/$(IMG_PREFIX)-$(dts).dtb; \
+		ln -sf \
+			$(IMG_PREFIX)-$(dts).dtb \
+			$@.boot/$(dts).dtb; \
 	)
 	mkimage -A arm -O linux -T script -C none -a 0 -e 0 \
 		-n '$(DEVICE_ID) OpenWrt bootscript' \
 		-d ./bootscript-$(DEVICE_NAME) \
-		$(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)_$(word 1, $(1))/6x_bootscript-$(DEVICE_NAME)
-	$(STAGING_DIR_HOST)/bin/mkfs.ubifs \
-		--space-fixup --force-compr=zlib --squash-uids \
-		-m $(word 2, $(1)) -e $(word 3, $(1)) -c $(word 5, $(1)) \
-		-o $(KDIR)/boot-$(DEVICE_NAME)-bootfs_$(word 1, $(1)).ubifs \
-		-d $(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)_$(word 1, $(1))
-	$(CP) $(KDIR)/boot-$(DEVICE_NAME)-bootfs_$(word 1, $(1)).ubifs \
-		$(BIN_DIR)/$(IMG_PREFIX)-$(DEVICE_NAME)-bootfs_$(word 1, $(1)).ubifs
+		$@.boot/6x_bootscript-$(DEVICE_NAME)
 
-	# ubi
-	rm -rf p $(KDIR)/$(DEVICE_NAME)_$(word 1, $(1))
-	mkdir -p $(KDIR)/$(DEVICE_NAME)_$(word 1, $(1))
-	$(CP) $(word 2, $^) \
-		$(KDIR)/$(DEVICE_NAME)_$(word 1, $(1))/
-	$(CP) $(KDIR)/boot-$(DEVICE_NAME)-bootfs_$(word 1, $(1)).ubifs \
-		$(KDIR)/$(DEVICE_NAME)_$(word 1, $(1))/boot.ubifs
-	$(CP) ./ubinize-$(DEVICE_NAME).cfg \
-		$(KDIR)/$(DEVICE_NAME)_$(word 1, $(1))/ubinize.cfg
-	( cd $(KDIR)/$(DEVICE_NAME)_$(word 1, $(1)); \
-		$(STAGING_DIR_HOST)/bin/ubinize \
-		-m $(word 2, $(1)) -p $(word 4, $(1)) -s $(word 2, $(1)) \
-		-o $@ \
-		ubinize.cfg \
-	)
+	$(STAGING_DIR_HOST)/bin/mkfs.ubifs \
+		--space-fixup --compr=zlib --squash-uids \
+		$(MKUBIFS_OPTS) -c 8124 \
+		-o $@.boot.ubifs -d $@.boot
+
+	$(TAR) -C $@.boot -cf $@.boot.tar .
 endef
 
 define Build/bootfs.tar.gz
-	# boot filesystem
-	rm -rf $(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)
-	mkdir -p $(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)
-	$(CP) $< $(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)/$(IMG_PREFIX)-uImage
-	ln -sf $(IMG_PREFIX)-uImage \
-		$(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)/uImage
-	$(foreach dts,$(shell echo $(DEVICE_DTS)), \
-		$(CP) $(LINUX_DIR)/arch/$(ARCH)/boot/dts/$(dts).dtb \
-			$(BIN_DIR)/$(IMG_PREFIX)-$(dts).dtb; \
-		$(CP) $(LINUX_DIR)/arch/$(ARCH)/boot/dts/$(dts).dtb \
-			$(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)/$(IMG_PREFIX)-$(dts).dtb; \
-		ln -sf $(IMG_PREFIX)-$(dts).dtb \
-			$(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)/$(dts).dtb; \
-	)
-	mkimage -A arm -O linux -T script -C none -a 0 -e 0 \
-		-n '$(DEVICE_ID) OpenWrt bootscript' \
-		-d ./bootscript-$(DEVICE_NAME) \
-		$(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME)/6x_bootscript-$(DEVICE_NAME)
+	rm -rf $@.boot
+	mkdir -p $@.boot
 
-	# tar and zip
-	( \
-		cd $(TARGET_ROOTFS_DIR)/boot-$(DEVICE_NAME); \
-		$(TAR) --numeric-owner --owner=0 --group=0 --transform "s,./,./boot/," \
-			-czvf $(BIN_DIR)/$(IMG_PREFIX)-$(DEVICE_NAME)-bootfs.tar.gz . ; \
-	)
+	$(TAR) -C $@.boot -xf $(IMAGE_KERNEL).boot.tar
+	$(TAR) -C $@.boot \
+		--numeric-owner --owner=0 --group=0 --transform "s,./,./boot/," \
+		-czvf $@ .
 endef
 
 #################################################
@@ -102,49 +58,69 @@ endef
 KERNEL_LOADADDR=0x10008000
 
 define Device/Default
-	DEVICE_DTS :=
-	FILESYSTEMS := squashfs ext4
-	KERNEL_INSTALL := 1
-	KERNEL_SUFFIX := -uImage
-	KERNEL_NAME := zImage
-	KERNEL_PREFIX := $$(IMAGE_PREFIX)
-	KERNEL := kernel-bin | uImage none
-	IMAGE_NAME = $$(IMAGE_PREFIX)-$$(1).$$(2)
-	IMAGES :=
+  PROFILES := Generic
+  FILESYSTEMS := squashfs ext4
+  KERNEL_INSTALL := 1
+  KERNEL_SUFFIX := -uImage
+  KERNEL_NAME := zImage
+  KERNEL_PREFIX := $$(IMAGE_PREFIX)
+  KERNEL := kernel-bin | uImage none
+  IMAGE_NAME = $$(IMAGE_PREFIX)-$$(1).$$(2)
+  IMAGES :=
 endef
-
-DEVICE_VARS += DEVICE_DTS
 
 define Device/ventana
-	PROFILES = Generic VENTANA
-	DEVICE_DTS:= \
-		imx6dl-gw51xx \
-		imx6dl-gw52xx \
-		imx6dl-gw53xx \
-		imx6dl-gw54xx \
-		imx6dl-gw551x \
-		imx6dl-gw552x \
-		imx6q-gw51xx \
-		imx6q-gw52xx \
-		imx6q-gw53xx \
-		imx6q-gw54xx \
-		imx6q-gw5400-a \
-		imx6q-gw551x \
-		imx6q-gw552x
-	IMAGES := nand_normal.ubi nand_large.ubi bootfs.tar.gz
-	IMAGE/nand_normal.ubi := ubi-boot-overlay normal 2048 124KiB 128KiB 8124
-	IMAGE/nand_large.ubi := ubi-boot-overlay large 4096 248KiB 256KiB 8124
-	IMAGE/bootfs.tar.gz := bootfs.tar.gz
-	IMAGE_NAME = $$(IMAGE_PREFIX)-$$(1)-$$(2)
+  DEVICE_TITLE := Gateworks Ventana family (normal NAND flash)
+  DEVICE_DTS:= \
+	imx6dl-gw51xx \
+	imx6dl-gw52xx \
+	imx6dl-gw53xx \
+	imx6dl-gw54xx \
+	imx6dl-gw551x \
+	imx6dl-gw552x \
+	imx6dl-gw553x \
+	imx6dl-gw5904 \
+	imx6q-gw51xx \
+	imx6q-gw52xx \
+	imx6q-gw53xx \
+	imx6q-gw54xx \
+	imx6q-gw5400-a \
+	imx6q-gw551x \
+	imx6q-gw552x \
+	imx6q-gw553x \
+	imx6q-gw5904
+  DEVICE_PACKAGES := kmod-sky2 kmod-sound-core kmod-sound-soc-imx kmod-sound-soc-imx-sgtl5000 \
+	kmod-can kmod-can-flexcan kmod-can-raw \
+	kmod-hwmon-gsc \
+	kmod-leds-gpio kmod-pps-gpio \
+	kobs-ng
+  KERNEL += | boot-overlay
+  IMAGES := nand.ubi bootfs.tar.gz
+  UBINIZE_PARTS = boot=$$(KDIR_KERNEL_IMAGE).boot.ubifs=15
+  IMAGE/nand.ubi := append-ubi
+  IMAGE/bootfs.tar.gz := bootfs.tar.gz | install-dtb
+  IMAGE_NAME = $$(IMAGE_PREFIX)-$$(1)-$$(2)
+  PAGESIZE := 2048
+  BLOCKSIZE := 128k
+  MKUBIFS_OPTS := -m $$(PAGESIZE) -e 124KiB
 endef
+TARGET_DEVICES += ventana
+
+define Device/ventana-large
+  $(Device/ventana)
+  DEVICE_NAME := ventana
+  DEVICE_TITLE := Gateworks Ventana family (large NAND flash)
+  IMAGES := nand.ubi
+  PAGESIZE := 4096
+  BLOCKSIZE := 256k
+  MKUBIFS_OPTS := -m $$(PAGESIZE) -e 248KiB
+endef
+TARGET_DEVICES += ventana-large
 
 define Device/wandboard
-	PROFILES = Generic IMX6DL_WANDBOARD
-	DEVICE_DTS := imx6dl-wandboard
+  DEVICE_TITLE := Wandboard Dual
+  DEVICE_DTS := imx6dl-wandboard
 endef
-
-TARGET_DEVICES += \
-	ventana \
-	wandboard
+TARGET_DEVICES += wandboard
 
 $(eval $(call BuildImage))

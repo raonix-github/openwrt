@@ -78,12 +78,42 @@ endef
 $(eval $(call KernelPackage,hwmon-adt7475))
 
 
+define KernelPackage/hwmon-ina209
+  TITLE:=INA209 monitoring support
+  KCONFIG:=CONFIG_SENSORS_INA209
+  FILES:=$(LINUX_DIR)/drivers/hwmon/ina209.ko
+  AUTOLOAD:=$(call AutoProbe,ina209)
+  $(call AddDepends/hwmon,+kmod-i2c-core)
+endef
+
+define KernelPackage/hwmon-ina209/description
+ Kernel module for ina209 dc power monitor chips
+endef
+
+$(eval $(call KernelPackage,hwmon-ina209))
+
+
+define KernelPackage/hwmon-nct6775
+  TITLE:=NCT6106D/6775F/6776F/6779D/6791D/6792D/6793D and compatibles monitoring support
+  KCONFIG:=CONFIG_SENSORS_NCT6775
+  FILES:=$(LINUX_DIR)/drivers/hwmon/nct6775.ko
+  AUTOLOAD:=$(call AutoProbe,nct6775)
+  $(call AddDepends/hwmon,@PCI_SUPPORT @TARGET_x86 +kmod-hwmon-vid)
+endef
+
+define KernelPackage/hwmon-nct6775/description
+ Kernel module for NCT6106D/6775F/6776F/6779D/6791D/6792D/6793D thermal monitor chip
+endef
+
+$(eval $(call KernelPackage,hwmon-nct6775))
+
+
 define KernelPackage/hwmon-ina2xx
   TITLE:=INA2XX monitoring support
   KCONFIG:=CONFIG_SENSORS_INA2XX
   FILES:=$(LINUX_DIR)/drivers/hwmon/ina2xx.ko
   AUTOLOAD:=$(call AutoProbe,ina2xx)
-  $(call AddDepends/hwmon,+kmod-i2c-core +LINUX_4_4:kmod-regmap)
+  $(call AddDepends/hwmon,+kmod-i2c-core +!LINUX_3_18:kmod-regmap)
 endef
 
 define KernelPackage/hwmon-ina2xx/description
@@ -93,12 +123,26 @@ endef
 $(eval $(call KernelPackage,hwmon-ina2xx))
 
 
+define KernelPackage/hwmon-it87
+  TITLE:=IT87 monitoring support
+  KCONFIG:=CONFIG_SENSORS_IT87
+  FILES:=$(LINUX_DIR)/drivers/hwmon/it87.ko
+  AUTOLOAD:=$(call AutoProbe,it87)
+  $(call AddDepends/hwmon,+kmod-i2c-core +kmod-hwmon-vid +PACKAGE_kmod-thermal:kmod-thermal)
+endef
+
+define KernelPackage/hwmon-it87/description
+ Kernel module for it87 thermal and voltage monitor chip
+endef
+
+$(eval $(call KernelPackage,hwmon-it87))
+
 define KernelPackage/hwmon-lm63
   TITLE:=LM63/64 monitoring support
   KCONFIG:=CONFIG_SENSORS_LM63
   FILES:=$(LINUX_DIR)/drivers/hwmon/lm63.ko
   AUTOLOAD:=$(call AutoProbe,lm63)
-  $(call AddDepends/hwmon,+kmod-i2c-core)
+  $(call AddDepends/hwmon,+kmod-i2c-core +kmod-regmap)
 endef
 
 define KernelPackage/hwmon-lm63/description
@@ -113,7 +157,7 @@ define KernelPackage/hwmon-lm75
   KCONFIG:=CONFIG_SENSORS_LM75
   FILES:=$(LINUX_DIR)/drivers/hwmon/lm75.ko
   AUTOLOAD:=$(call AutoProbe,lm75)
-  $(call AddDepends/hwmon,+kmod-i2c-core +PACKAGE_kmod-thermal:kmod-thermal)
+  $(call AddDepends/hwmon,+kmod-i2c-core +PACKAGE_kmod-thermal:kmod-thermal +kmod-regmap)
 endef
 
 define KernelPackage/hwmon-lm75/description
@@ -195,6 +239,20 @@ endef
 
 $(eval $(call KernelPackage,hwmon-lm95241))
 
+define KernelPackage/hwmon-ltc4151
+  TITLE:=LTC4151 monitoring support
+  KCONFIG:=CONFIG_SENSORS_LTC4151
+  FILES:=$(LINUX_DIR)/drivers/hwmon/ltc4151.ko
+  AUTOLOAD:=$(call AutoProbe,ltc4151)
+  $(call AddDepends/hwmon,+kmod-i2c-core)
+endef
+
+define KernelPackage/hwmon-ltc4151/description
+ Kernel module for Linear Technology LTC4151 current and voltage monitor chip
+endef
+
+$(eval $(call KernelPackage,hwmon-ltc4151))
+
 define KernelPackage/hwmon-sht21
   TITLE:=Sensiron SHT21 and compat. monitoring support
   KCONFIG:=CONFIG_SENSORS_SHT21
@@ -208,6 +266,22 @@ define KernelPackage/hwmon-sht21/description
 endef
 
 $(eval $(call KernelPackage,hwmon-sht21))
+
+define KernelPackage/hwmon-sch5627
+  TITLE:=SMSC SCH5627 monitoring support
+  KCONFIG:=CONFIG_SENSORS_SCH5627
+  FILES:= \
+	$(LINUX_DIR)/drivers/hwmon/sch5627.ko \
+	$(LINUX_DIR)/drivers/hwmon/sch56xx-common.ko
+  AUTOLOAD:=$(call AutoProbe,sch5627)
+  $(call AddDepends/hwmon,+kmod-i2c-core)
+endef
+
+define KernelPackage/hwmon-sch5627/description
+ SMSC SCH5627 Super I/O chips include complete hardware monitoring
+endef
+
+$(eval $(call KernelPackage,hwmon-sch5627))
 
 define KernelPackage/hwmon-pc87360
   TITLE:=PC87360 monitoring support
@@ -229,7 +303,7 @@ define KernelPackage/hwmon-w83627hf
   KCONFIG:=CONFIG_SENSORS_W83627HF
   FILES:=$(LINUX_DIR)/drivers/hwmon/w83627hf.ko
   AUTOLOAD:=$(call AutoLoad,50,w83627hf)
-  $(call AddDepends/hwmon,@TARGET_rdc||TARGET_x86 +kmod-hwmon-vid)
+  $(call AddDepends/hwmon,@TARGET_x86 +kmod-hwmon-vid)
 endef
 
 define KernelPackage/hwmon-w83627hf/description
@@ -239,19 +313,66 @@ endef
 $(eval $(call KernelPackage,hwmon-w83627hf))
 
 
-define KernelPackage/hwmon-gsc
-  TITLE:=Gateworks GSC monitoring support
-  KCONFIG:=CONFIG_SENSORS_GSC
-  FILES:=$(LINUX_DIR)/drivers/hwmon/gsc.ko
-  AUTOLOAD:=$(call AutoLoad,60,gsc)
-  $(call AddDepends/hwmon,+kmod-i2c-core)
+define KernelPackage/hwmon-w83627ehf
+  TITLE:=Winbond W83627EHF/EHG/DHG/UHG, W83667HG monitoring support
+  KCONFIG:=CONFIG_SENSORS_W83627EHF
+  FILES:=$(LINUX_DIR)/drivers/hwmon/w83627ehf.ko
+  AUTOLOAD:=$(call AutoProbe,w83627ehf)
+  $(call AddDepends/hwmon,@TARGET_x86 +kmod-hwmon-vid)
 endef
 
-define KernelPackage/hwmon-gsc/description
-  Kernel module for the Gateworks System Controller chips.
+define KernelPackage/hwmon-w83627ehf/description
+ Kernel module for Winbond W83627EHF/EHG/DHG/UHG and W83667HG thermal monitor chip
+ Support for NCT6775F and NCT6776F has been removed from this driver in favour of
+ using the nct6775 driver to handle those chips.
 endef
 
-$(eval $(call KernelPackage,hwmon-gsc))
+$(eval $(call KernelPackage,hwmon-w83627ehf))
+
+
+define KernelPackage/hwmon-w83793
+  TITLE:=Winbond W83793G/R monitoring support
+  KCONFIG:=CONFIG_SENSORS_W83793
+  FILES:=$(LINUX_DIR)/drivers/hwmon/w83793.ko
+  AUTOLOAD:=$(call AutoProbe,w83793)
+  $(call AddDepends/hwmon,+kmod-i2c-core +kmod-hwmon-vid)
+endef
+
+define KernelPackage/hwmon-w83793/description
+  Kernel module for the Winbond W83793G and W83793R chips.
+endef
+
+$(eval $(call KernelPackage,hwmon-w83793))
+
+
+define KernelPackage/hwmon-tmp102
+  TITLE:=Texas Instruments TMP102 monitoring support
+  KCONFIG:=CONFIG_SENSORS_TMP102
+  FILES:=$(LINUX_DIR)/drivers/hwmon/tmp102.ko
+  AUTOLOAD:=$(call AutoProbe,tmp102)
+  $(call AddDepends/hwmon,+kmod-i2c-core +PACKAGE_kmod-thermal:kmod-thermal +kmod-regmap)
+endef
+
+define KernelPackage/hwmon-tmp102/description
+ Kernel module for Texas Instruments TMP102 temperature sensors chip
+endef
+
+$(eval $(call KernelPackage,hwmon-tmp102))
+
+
+define KernelPackage/hwmon-tmp103
+  TITLE:=Texas Instruments TMP103 monitoring support
+  KCONFIG:=CONFIG_SENSORS_TMP103
+  FILES:=$(LINUX_DIR)/drivers/hwmon/tmp103.ko
+  AUTOLOAD:=$(call AutoProbe,tmp103)
+  $(call AddDepends/hwmon,+kmod-i2c-core +kmod-regmap)
+endef
+
+define KernelPackage/hwmon-tmp103/description
+ Kernel module for Texas Instruments TMP103 temperature sensors chip
+endef
+
+$(eval $(call KernelPackage,hwmon-tmp103))
 
 
 define KernelPackage/hwmon-tmp421
@@ -297,19 +418,3 @@ define KernelPackage/hwmon-pwmfan/description
 endef
 
 $(eval $(call KernelPackage,hwmon-pwmfan))
-
-
-define KernelPackage/hwmon-k10temp
-  TITLE:=AMD Family 10h+ temperature sensor
-  KCONFIG:=CONFIG_SENSORS_K10TEMP
-  FILES:=$(LINUX_DIR)/drivers/hwmon/k10temp.ko
-  AUTOLOAD:=$(call AutoLoad,60,k10temp)
-  $(call AddDepends/hwmon,@PCI_SUPPORT @TARGET_x86)
-endef
-
-define KernelPackage/hwmon-k10temp/description
-  Thermal sensor support for AMD 10h, 11h, 12h (Llano), 14h (Brazos),
-  15h (Bulldozer/Trinity/Kaveri) and 16h (Kabini/Mullins) CPUs
-endef
-
-$(eval $(call KernelPackage,hwmon-k10temp))

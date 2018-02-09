@@ -9,56 +9,65 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/version.mk
+include $(INCLUDE_DIR)/feeds.mk
 
 PKG_NAME:=base-files
-PKG_RELEASE:=169
+PKG_RELEASE:=184
+PKG_FLAGS:=nonshared
 
 PKG_FILE_DEPENDS:=$(PLATFORM_DIR)/ $(GENERIC_PLATFORM_DIR)/base-files/
 PKG_BUILD_DEPENDS:=usign/host
 PKG_LICENSE:=GPL-2.0
 
-PKG_CONFIG_DEPENDS := CONFIG_SIGNED_PACKAGES CONFIG_TARGET_INIT_PATH CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE
+# Extend depends from version.mk
+PKG_CONFIG_DEPENDS += \
+	CONFIG_SIGNED_PACKAGES CONFIG_TARGET_INIT_PATH CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE \
+	CONFIG_NAND_SUPPORT \
+	CONFIG_CLEAN_IPKG \
+	CONFIG_PER_FEED_REPO \
+	CONFIG_PER_FEED_REPO_ADD_DISABLED \
+	CONFIG_PER_FEED_REPO_ADD_COMMENTED \
+	$(foreach feed,$(FEEDS_INSTALLED),CONFIG_FEED_$(feed))
 
 include $(INCLUDE_DIR)/package.mk
 
 ifneq ($(DUMP),1)
-  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell $(SH_FUNC) echo $(CONFIG_TARGET_INIT_PATH) | md5s)
+  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | mkhash md5)
   TARGET:=-$(BOARD)
-  ifneq ($(wildcard $(PLATFORM_DIR)/base-files-$(PROFILE) $(PLATFORM_SUBDIR)/base-files-$(PROFILE)),)
-    TARGET:=$(TARGET)-$(PROFILE)
-  endif
 endif
 
 define Package/base-files
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+netifd +libc +procd +jsonfilter +SIGNED_PACKAGES:usign +fstools
+  DEPENDS:=+netifd +libc +procd +jsonfilter +SIGNED_PACKAGES:usign +SIGNED_PACKAGES:lede-keyring +NAND_SUPPORT:ubi-utils +fstools +fwtool
   TITLE:=Base filesystem for OpenWrt
   URL:=http://openwrt.org/
   VERSION:=$(PKG_RELEASE)-$(REVISION)
 endef
 
 define Package/base-files/conffiles
+/etc/config/
 /etc/config/network
 /etc/config/system
+/etc/crontabs/
+/etc/dropbear/
+/etc/group
 /etc/hosts
 /etc/inittab
-/etc/group
+/etc/iproute2/rt_protos
+/etc/iproute2/rt_tables
 /etc/passwd
-/etc/shadow
 /etc/profile
+/etc/profile.d
 /etc/protocols
+/etc/rc.local
 /etc/services
+/etc/shadow
 /etc/shells
 /etc/sysctl.conf
-/etc/rc.local
-/etc/sysupgrade.conf
-/etc/config/
-/etc/dropbear/
-/etc/crontabs/
-/etc/sysctl.d/local.conf
 /etc/sysctl.d/
-/etc/iproute2/rt_tables
+/etc/sysctl.d/local.conf
+/etc/sysupgrade.conf
 $(call $(TARGET)/conffiles)
 endef
 
@@ -66,7 +75,6 @@ define Package/base-files/description
  This package contains a base filesystem and system scripts for OpenWrt.
 endef
 
-ifneq ($(CONFIG_PREINITOPT),)
 define ImageConfigOptions
 	mkdir -p $(1)/lib/preinit
 	echo 'pi_suppress_stderr="$(CONFIG_TARGET_PREINIT_SUPPRESS_STDERR)"' >$(1)/lib/preinit/00_preinit.conf
@@ -83,7 +91,6 @@ define ImageConfigOptions
 	echo 'pi_preinit_no_failsafe_netmsg="$(CONFIG_TARGET_PREINIT_SUPPRESS_FAILSAFE_NETMSG)"' >>$(1)/lib/preinit/00_preinit.conf
 	echo 'pi_preinit_no_failsafe="$(CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE)"' >>$(1)/lib/preinit/00_preinit.conf
 endef
-endif
 
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
@@ -108,40 +115,37 @@ ifdef CONFIG_SIGNED_PACKAGES
   endef
 endif
 
+ifeq ($(CONFIG_NAND_SUPPORT),)
+  define Package/base-files/nand-support
+	rm -f $(1)/lib/upgrade/nand.sh
+  endef
+endif
+
 define Package/base-files/install
 	$(CP) ./files/* $(1)/
 	$(Package/base-files/install-key)
+	$(Package/base-files/nand-support)
 	if [ -d $(GENERIC_PLATFORM_DIR)/base-files/. ]; then \
 		$(CP) $(GENERIC_PLATFORM_DIR)/base-files/* $(1)/; \
 	fi
 	if [ -d $(PLATFORM_DIR)/base-files/. ]; then \
 		$(CP) $(PLATFORM_DIR)/base-files/* $(1)/; \
 	fi
-	if [ -d $(PLATFORM_DIR)/base-files-$(PROFILE)/. ]; then \
-		$(CP) $(PLATFORM_DIR)/base-files-$(PROFILE)/* $(1)/; \
-	fi
-	if [ -d $(PLATFORM_DIR)/$(PROFILE)/base-files/. ]; then \
-		$(CP) $(PLATFORM_DIR)/$(PROFILE)/base-files/* $(1)/; \
-	fi
 	$(if $(filter-out $(PLATFORM_DIR),$(PLATFORM_SUBDIR)), \
 		if [ -d $(PLATFORM_SUBDIR)/base-files/. ]; then \
 			$(CP) $(PLATFORM_SUBDIR)/base-files/* $(1)/; \
 		fi; \
-		if [ -d $(PLATFORM_SUBDIR)/base-files-$(PROFILE)/. ]; then \
-			$(CP) $(PLATFORM_SUBDIR)/base-files-$(PROFILE)/* $(1)/; \
-		fi; \
-		if [ -d $(PLATFORM_SUBDIR)/$(PROFILE)/base-files/. ]; then \
-			$(CP) $(PLATFORM_SUBDIR)/$(PROFILE)/base-files/* $(1)/; \
-		fi \
 	)
 
-	$(VERSION_SED) \
+	$(VERSION_SED_SCRIPT) \
 		$(1)/etc/banner \
-		$(1)/etc/openwrt_version
+		$(1)/etc/openwrt_version \
+		$(1)/usr/lib/os-release
 
 	$(VERSION_SED_SCRIPT) \
 		$(1)/etc/openwrt_release \
-		$(1)/etc/device_info
+		$(1)/etc/device_info \
+		$(1)/usr/lib/os-release
 
 	$(SED) "s#%PATH%#$(TARGET_INIT_PATH)#g" \
 		$(1)/sbin/hotplug-call \
@@ -150,6 +154,7 @@ define Package/base-files/install
 
 	mkdir -p $(1)/CONTROL
 	mkdir -p $(1)/dev
+	mkdir -p $(1)/etc/config
 	mkdir -p $(1)/etc/crontabs
 	mkdir -p $(1)/etc/rc.d
 	mkdir -p $(1)/overlay
@@ -168,7 +173,7 @@ define Package/base-files/install
 	rm -f $(1)/var
 	$(LN) /tmp $(1)/var
 	mkdir -p $(1)/etc
-	$(LN) /tmp/resolv.conf /tmp/fstab /tmp/TZ /tmp/localtime $(1)/etc/
+	$(LN) /tmp/resolv.conf /tmp/TZ /tmp/localtime $(1)/etc/
 
 	chmod 0600 $(1)/etc/shadow
 	chmod 1777 $(1)/tmp
@@ -181,10 +186,20 @@ define Package/base-files/install
 				echo "$$$${conffile##$(1)}" >> $(1)/CONTROL/conffiles; \
 		fi \
 	done
+
+	$(if $(CONFIG_INCLUDE_CONFIG), \
+		echo -e "# Build configuration for board $(BOARD)/$(SUBTARGET)/$(PROFILE)\n" >$(1)/etc/build.config; \
+		cat $(BIN_DIR)/config.seed >>$(1)/etc/build.config)
+
+	$(if $(CONFIG_CLEAN_IPKG),, \
+		mkdir -p $(1)/etc/opkg; \
+		$(call FeedSourcesAppend,$(1)/etc/opkg/distfeeds.conf); \
+		$(VERSION_SED_SCRIPT) $(1)/etc/opkg/distfeeds.conf)
 endef
 
 ifneq ($(DUMP),1)
   -include $(PLATFORM_DIR)/base-files.mk
+  -include $(PLATFORM_SUBDIR)/base-files.mk
 endif
 
 $(eval $(call BuildPackage,base-files))

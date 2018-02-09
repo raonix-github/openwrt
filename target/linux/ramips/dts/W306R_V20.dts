@@ -2,8 +2,11 @@
 
 #include "rt3050.dtsi"
 
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
 / {
-	compatible = "W306R_V20", "ralink,rt3052-soc";
+	compatible = "tenda,w306r-v2", "ralink,rt3052-soc";
 	model = "Tenda W306R V2.0";
 
 	cfi@1f000000 {
@@ -38,38 +41,17 @@
 		};
 	};
 
-	pinctrl {
-		state_default: pinctrl0 {
-			gpio {
-				ralink,group = "spi", "i2c", "jtag", "rgmii", "mdio", "uartf";
-				ralink,function = "gpio";
-			};
-		};
-	};
-
-	ethernet@10100000 {
-		mtd-mac-address = <&factory 0x28>;
-	};
-
-	esw@10110000 {
-		mediatek,portmap = <0x3e>;
-	};
-
-	wmac@10180000 {
-		ralink,mtd-eeprom = <&factory 0>;
-	};
-
 	gpio-leds {
 		compatible = "gpio-leds";
 
 		sys {
 			label = "w306r-v20:green:sys";
-			gpios = <&gpio0 9 1>;
+			gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
 		};
 
 		wps {
 			label = "w306r-v20:green:wps";
-			gpios = <&gpio0 13 1>;
+			gpios = <&gpio0 13 GPIO_ACTIVE_LOW>;
 		};
 	};
 
@@ -81,8 +63,29 @@
 
 		reset {
 			label = "RESET/WPS";
-			gpios = <&gpio0 10 1>;
-			linux,code = <0x198>;
+			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
 		};
 	};
+};
+
+&pinctrl {
+	state_default: pinctrl0 {
+		gpio {
+			ralink,group = "spi", "i2c", "jtag", "rgmii", "mdio", "uartf";
+			ralink,function = "gpio";
+		};
+	};
+};
+
+&ethernet {
+	mtd-mac-address = <&factory 0x28>;
+};
+
+&esw {
+	mediatek,portmap = <0x3e>;
+};
+
+&wmac {
+	ralink,mtd-eeprom = <&factory 0>;
 };

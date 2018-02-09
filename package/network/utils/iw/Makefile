@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=iw
-PKG_VERSION:=4.3
+PKG_VERSION:=4.9
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL:=https://www.kernel.org/pub/software/network/iw
-PKG_MD5SUM:=7adec72e91ebdd9c55429fa34a23a6f5
+PKG_SOURCE_URL:=@KERNEL/software/network/iw
+PKG_HASH:=324cc805fad52cba2c16b9ab569906889fb645cc962aac4cfda1db85d2de97ce
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=GPL-2.0
@@ -30,8 +30,7 @@ endef
 
 define Build/Configure
 	echo "const char iw_version[] = \"$(PKG_VERSION)\";" > $(PKG_BUILD_DIR)/version.c
-	rm -f $(PKG_BUILD_DIR)/version.sh
-	touch $(PKG_BUILD_DIR)/version.sh
+	echo "#!/bin/sh" > $(PKG_BUILD_DIR)/version.sh
 	chmod +x $(PKG_BUILD_DIR)/version.sh
 endef
 

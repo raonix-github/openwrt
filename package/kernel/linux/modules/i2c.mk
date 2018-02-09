@@ -104,53 +104,6 @@ endef
 
 $(eval $(call KernelPackage,i2c-gpio))
 
-I2C_MPC_MODULES:=\
-  CONFIG_I2C_MPC:drivers/i2c/busses/i2c-mpc
-
-define KernelPackage/i2c-mpc
-  $(call i2c_defaults,$(I2C_MPC_MODULES),59)
-  TITLE:=MPC I2C accessors
-  DEPENDS:=@TARGET_mpc52xx||TARGET_mpc83xx||TARGET_mpc85xx +kmod-i2c-core
-endef
-
-define KernelPackage/i2c-mpc/description
- Kernel module for Freescale MPC52xx MPC83xx MPC85xx I2C accessors
-endef
-
-$(eval $(call KernelPackage,i2c-mpc))
-
-I2C_IBM_IIC_MODULES:=\
-  CONFIG_I2C_IBM_IIC:drivers/i2c/busses/i2c-ibm_iic
-
-define KernelPackage/i2c-ibm-iic
-  $(call i2c_defaults,$(OF_I2C_MODULES),59)
-  TITLE:=IBM PPC 4xx on-chip I2C interface support
-  DEPENDS:=@TARGET_ppc40x||TARGET_ppc4xx +kmod-i2c-core
-endef
-
-define KernelPackage/i2c-ibm-iic/description
- Kernel module for IIC peripheral found on embedded IBM PPC4xx based systems
-endef
-
-$(eval $(call KernelPackage,i2c-ibm-iic))
-
-I2C_MV64XXX_MODULES:=\
-  CONFIG_I2C_MV64XXX:drivers/i2c/busses/i2c-mv64xxx
-
-define KernelPackage/i2c-mv64xxx
-  $(call i2c_defaults,$(I2C_MV64XXX_MODULES),59)
-  TITLE:=Orion Platform I2C interface support
-  DEPENDS:=@TARGET_kirkwood||TARGET_orion||TARGET_mvebu +kmod-i2c-core
-endef
-
-define KernelPackage/i2c-mv64xxx/description
- Kernel module for I2C interface on the Kirkwood, Orion and Armada XP/370
- family processors
-endef
-
-$(eval $(call KernelPackage,i2c-mv64xxx))
-
-
 I2C_TINY_USB_MODULES:= \
   CONFIG_I2C_TINY_USB:drivers/i2c/busses/i2c-tiny-usb
 
@@ -174,7 +127,7 @@ I2C_PIIX4_MODULES:= \
 define KernelPackage/i2c-piix4
   $(call i2c_defaults,$(I2C_PIIX4_MODULES),59)
   TITLE:=Intel PIIX4 and compatible I2C interfaces
-  DEPENDS:=@PCI_SUPPORT @(x86||x86_64) kmod-i2c-core
+  DEPENDS:=@PCI_SUPPORT @TARGET_x86 kmod-i2c-core
 endef
 
 define KernelPackage/i2c-piix4/description
@@ -187,6 +140,47 @@ define KernelPackage/i2c-piix4/description
 endef
 
 $(eval $(call KernelPackage,i2c-piix4))
+
+
+I2C_I801_MODULES:= \
+  CONFIG_I2C_I801:drivers/i2c/busses/i2c-i801
+
+define KernelPackage/i2c-i801
+  $(call i2c_defaults,$(I2C_I801_MODULES),59)
+  TITLE:=Intel I801 and compatible I2C interfaces
+  DEPENDS:=@PCI_SUPPORT @TARGET_x86 kmod-i2c-core +kmod-i2c-smbus
+endef
+
+define KernelPackage/i2c-i801/description
+ Support for the Intel I801 family of mainboard I2C interfaces,
+ specifically 82801AA, 82801AB, 82801BA, 82801CA/CAM, 82801DB,
+ 82801EB/ER (ICH5/ICH5R), 6300ESB, ICH6, ICH7, ESB2, ICH8, ICH9,
+ EP80579 (Tolapai), ICH10, 5/3400 Series (PCH), 6 Series (PCH),
+ Patsburg (PCH), DH89xxCC (PCH), Panther Point (PCH),
+ Lynx Point (PCH), Lynx Point-LP (PCH), Avoton (SOC),
+ Wellsburg (PCH), Coleto Creek (PCH), Wildcat Point (PCH),
+ Wildcat Point-LP (PCH), BayTrail (SOC), Sunrise Point-H (PCH),
+ Sunrise Point-LP (PCH), DNV (SOC), Broxton (SOC),
+ Lewisburg (PCH).
+endef
+
+$(eval $(call KernelPackage,i2c-i801))
+
+
+I2C_SMBUS_MODULES:= \
+  CONFIG_I2C_SMBUS:drivers/i2c/i2c-smbus
+
+define KernelPackage/i2c-smbus
+  $(call i2c_defaults,$(I2C_SMBUS_MODULES),58)
+  TITLE:=SMBus-specific protocols helper
+  DEPENDS:=kmod-i2c-core
+endef
+
+define KernelPackage/i2c-smbus/description
+ Support for the SMBus extensions to the I2C specification.
+endef
+
+$(eval $(call KernelPackage,i2c-smbus))
 
 
 I2C_MUX_MODULES:= \

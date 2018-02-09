@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015 OpenWrt.org
+# Copyright (C) 2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -7,35 +7,78 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
 
+# On ARC initramfs is put before entry point and so entry point moves
+# in memory from build to built. Thus we need to extract EP from vmlinux
+# every time before generation of uImage.
+kernel_ep = `$(KERNEL_CROSS)readelf -h $(1) | grep "Entry point address" | grep -o 0x.*`
+
 define Build/patch-dtb
-	$(call Image/BuildDTB,../dts/$(DEVICE_DTS).dts,$@.dtb)
-	$(STAGING_DIR_HOST)/bin/patch-dtb $@ $@.dtb
+	$(STAGING_DIR_HOST)/bin/patch-dtb $@ $(DTS_DIR)/$(DEVICE_DTS).dtb
 endef
 
-# Shared device definition: applies to every defined device
-define Device/Default
-  PROFILES = Default $$(DEVICE_PROFILE)
-  KERNEL_DEPENDS = $$(wildcard ../dts/$$(DEVICE_DTS).dts)
-  KERNEL_SUFFIX := .elf
-  KERNEL_INITRAMFS := kernel-bin | patch-dtb
-  KERNEL_INITRAMFS_NAME = $$(KERNEL_NAME)-initramfs.elf
-  DEVICE_PROFILE :=
-  DEVICE_DTS :=
-endef
-DEVICE_VARS += DEVICE_PROFILE DEVICE_DTS
-
-define add_arc770
-  define Device/$(1)
-    DEVICE_PROFILE := $(1)
-    DEVICE_DTS := $(1)
-  endef
-  TARGET_DEVICES += $(1)
+ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
+# Root FS built-in
+define Device/vmlinux
+	KERNEL_SUFFIX := .elf
+	KERNEL := kernel-bin | patch-dtb
+	KERNEL_INITRAMFS_NAME = vmlinux-initramfs.elf
 endef
 
-# DesignWare AXS101
-$(eval $(call add_arc770,axs101))
+define Device/nsim
+	$(call Device/vmlinux)
+	DEVICE_PROFILE := nsim
+	DEVICE_DTS := nsim_700
+endef
+TARGET_DEVICES += nsim
+endif
 
-# nSIM with ARC770
-$(eval $(call add_arc770,nsim_700))
+# Root FS on SD-card
+KERNEL_LOADADDR := 0x80000000
+DEVICE_DTS_LIST:= axs101 nsim_700
+FAT32_BLOCK_SIZE=1024
+FAT32_BLOCKS=$(shell echo $$(($(CONFIG_AXS10X_SD_BOOT_PARTSIZE)*1024*1024/$(FAT32_BLOCK_SIZE))))
+
+define Image/Prepare
+	# Build .dtb for all boards we may run on
+	$(foreach dts,$(DEVICE_DTS_LIST),
+		$(call Image/BuildDTB,$(DTS_DIR)/$(dts).dts,$(DTS_DIR)/$(dts).dtb)
+	)
+endef
+
+define Image/Build/SDCard
+	rm -f $(KDIR_TMP)/$(IMG_PREFIX)-$(PROFILE)-boot.img
+	mkfs.fat $(KDIR_TMP)/$(IMG_PREFIX)-$(PROFILE)-boot.img -C $(FAT32_BLOCKS)
+	mkimage -C none -A arc -T script -d uEnv.txt $(BIN_DIR)/uEnv.scr
+	mcopy -i $(KDIR_TMP)/$(IMG_PREFIX)-$(PROFILE)-boot.img $(BIN_DIR)/uEnv.scr ::boot.scr
+	mcopy -i $(KDIR_TMP)/$(IMG_PREFIX)-$(PROFILE)-boot.img $(DTS_DIR)/*.dtb ::
+	mcopy -i $(KDIR_TMP)/$(IMG_PREFIX)-$(PROFILE)-boot.img $(BIN_DIR)/$(IMG_PREFIX)-uImage ::uImage
+
+	./gen_axs10x_sdcard_img.sh \
+		$(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-sdcard-vfat-$(1).img \
+		$(KDIR_TMP)/$(IMG_PREFIX)-$(PROFILE)-boot.img \
+		$(KDIR)/root.$(1) \
+		$(CONFIG_AXS10X_SD_BOOT_PARTSIZE) \
+		$(CONFIG_TARGET_ROOTFS_PARTSIZE)
+
+ifneq ($(CONFIG_TARGET_IMAGES_GZIP),)
+	gzip -f9n $(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-sdcard-vfat-$(1).img
+endif
+endef
+
+define Image/BuildKernel
+	# Build unified uImage
+	$(call Image/BuildKernel/MkuImage, \
+		none, $(KERNEL_LOADADDR),$(call kernel_ep,$(KDIR)/vmlinux.elf) , \
+		$(KDIR)/vmlinux, \
+		$(BIN_DIR)/$(IMG_PREFIX)-uImage \
+	)
+endef
+
+define Image/Build
+	$(call Image/Build/$(1),$(1))
+	$(call Image/Build/SDCard,$(1))
+	dd if=$(KDIR)/root.$(1) of=$(BIN_DIR)/$(IMG_PREFIX)-root.$(1) bs=128k conv=sync
+	$(call Image/Gzip,$(BIN_DIR)/$(IMG_PREFIX)-root.$(1))
+endef
 
 $(eval $(call BuildImage))

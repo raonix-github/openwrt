@@ -10,6 +10,8 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=oseama
 PKG_RELEASE:=1
 
+PKG_FLAGS:=nonshared
+
 include $(INCLUDE_DIR)/package.mk
 
 define Package/oseama
@@ -22,11 +24,6 @@ endef
 
 define Package/oseama/description
  This package contains an utility that allows handling Seama images.
-endef
-
-define Build/Prepare
-	mkdir -p $(PKG_BUILD_DIR)
-	$(CP) ./src/* $(PKG_BUILD_DIR)/
 endef
 
 define Build/Compile

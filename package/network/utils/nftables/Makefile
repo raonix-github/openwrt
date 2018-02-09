@@ -7,20 +7,20 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=nftables
-PKG_VERSION:=0.4+2015-04-09
+PKG_VERSION:=0.8.1
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_URL:=git://git.netfilter.org/nftables
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=3ed296118a065caff5600e60d4f7ef18e137f9a0
+PKG_SOURCE_URL:=https://netfilter.org/projects/$(PKG_NAME)/files
+PKG_HASH:=8aead66cce70d68c70e4be917813abcbcf62811ee6de4c7761d0e34391772fc4
 PKG_MAINTAINER:=Steven Barth <steven@midlink.org>
 PKG_LICENSE:=GPL-2.0
 
 PKG_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/package.mk
+
+DISABLE_NLS:=
 
 CONFIGURE_ARGS += \
         --with-mini-gmp \
@@ -31,7 +31,7 @@ define Package/nftables
   CATEGORY:=Network
   SUBMENU:=Firewall
   TITLE:=nftables packet filtering userspace utility
-  DEPENDS:=+kmod-nft-core +kmod-nft-nat +libnftnl
+  DEPENDS:=+kmod-nft-core +libnftnl
   URL:=http://netfilter.org/projects/nftables/
 endef
 

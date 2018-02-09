@@ -1,15 +1,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libubox
-PKG_VERSION:=2016-02-26
-PKG_RELEASE=$(PKG_SOURCE_VERSION)
+PKG_RELEASE=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=$(OPENWRT_GIT)/project/libubox.git
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=5326ce1046425154ab715387949728cfb09f4083
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
-PKG_MIRROR_MD5SUM:=
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/libubox.git
+PKG_SOURCE_DATE:=2018-02-08
+PKG_SOURCE_VERSION:=bb0c830b2a259b7c5ffa7c309ce9d3004f3c41a1
+PKG_MIRROR_HASH:=25d6a194b0dfdcf85119af90d354e00b8d1c20df94aa0f5ec43cf0399f407298
 CMAKE_INSTALL:=1
 
 PKG_LICENSE:=ISC
@@ -20,6 +18,7 @@ PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_BUILD_DEPENDS:=lua
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/cmake.mk
 
 define Package/libubox
@@ -92,8 +91,14 @@ define Package/libubox-lua/install
 	$(CP) $(PKG_BUILD_DIR)/lua/uloop.so $(1)/usr/lib/lua/
 endef
 
+
+CMAKE_HOST_OPTIONS += \
+	-DBUILD_LUA=OFF \
+	-DBUILD_EXAMPLES=OFF \
+
 $(eval $(call BuildPackage,libubox))
 $(eval $(call BuildPackage,libblobmsg-json))
 $(eval $(call BuildPackage,jshn))
 $(eval $(call BuildPackage,libjson-script))
 $(eval $(call BuildPackage,libubox-lua))
+$(eval $(call HostBuild))

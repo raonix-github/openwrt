@@ -12,14 +12,14 @@ BOARDNAME:=Synopsys DesignWare ARC 770D
 MAINTAINER:=Alexey Brodkin <abrodkin@synopsys.com>
 SUBTARGETS:=generic
 
-KERNEL_PATCHVER:=4.4
+KERNEL_PATCHVER:=4.9
 
 DEVICE_TYPE:=developerboard
-
-include $(INCLUDE_DIR)/target.mk
 
 define Target/Description
 	Synopsys DesignWare boards
 endef
+
+include $(INCLUDE_DIR)/target.mk
 
 $(eval $(call BuildTarget))

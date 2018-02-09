@@ -1,28 +1,14 @@
 #!/bin/sh /etc/rc.common
 # Copyright (C) 2008 OpenWrt.org
 
-
 START=96
-# bygomma : trigger on ntwork
-USE_PROCD=1
-
-service_triggers() {
-	procd_add_interface_trigger "interface.*" "eth0"  echo "############# link"
-}
-
-start_service() {
-	[ -e /sys/class/leds/ ] && {
-		config_load system
-		config_foreach load_led led
-	}
-}
-# bygomma adn
 
 load_led() {
 	local name
 	local sysfs
 	local trigger
 	local dev
+	local ports
 	local mode
 	local default
 	local delayon
@@ -33,6 +19,7 @@ load_led() {
 	config_get name $1 name "$sysfs"
 	config_get trigger $1 trigger "none"
 	config_get dev $1 dev
+	config_get ports $1 port
 	config_get mode $1 mode "link"
 	config_get_bool default $1 default "nil"
 	config_get delayon $1 delayon
@@ -49,8 +36,23 @@ load_led() {
 		return
 	fi
 
+	[ "$trigger" = "usbdev" ] && {
+		# Backward compatibility: translate to the new trigger
+		trigger="usbport"
+		# Translate port of root hub, e.g. 4-1 -> usb4-port1
+		ports=$(echo "$dev" | sed -n 's/^\([0-9]*\)-\([0-9]*\)$/usb\1-port\2/p')
+		# Translate port of extra hub, e.g. 2-2.4 -> 2-2-port4
+		[ -z "$ports" ] && ports=$(echo "$dev" | sed -n 's/\./-port/p')
+	}
+
 	[ -e /sys/class/leds/${sysfs}/brightness ] && {
 		echo "setting up led ${name}"
+
+		printf "%s %s %d\n" \
+			"$sysfs" \
+			"$(sed -ne 's/^.*\[\(.*\)\].*$/\1/p' /sys/class/leds/${sysfs}/trigger)" \
+			"$(cat /sys/class/leds/${sysfs}/brightness)" \
+				>> /var/run/led.state
 
 		[ "$default" = 0 ] &&
 			echo 0 >/sys/class/leds/${sysfs}/brightness
@@ -70,31 +72,28 @@ load_led() {
 			[ -n "$dev" ] && {
 				echo $dev > /sys/class/leds/${sysfs}/device_name
 				echo $mode > /sys/class/leds/${sysfs}/mode
+				echo $interval > /sys/class/leds/${sysfs}/interval
 			}
 			;;
 
-		"timer")
+		"timer"|"oneshot")
 			[ -n "$delayon" ] && \
 				echo $delayon > /sys/class/leds/${sysfs}/delay_on
 			[ -n "$delayoff" ] && \
 				echo $delayoff > /sys/class/leds/${sysfs}/delay_off
 			;;
 
-		"usbdev")
-			[ -n "$dev" ] && {
-				echo $dev > /sys/class/leds/${sysfs}/device_name
-				echo $interval > /sys/class/leds/${sysfs}/activity_interval
-			}
+		"usbport")
+			local p
+
+			for p in $ports; do
+				echo 1 > /sys/class/leds/${sysfs}/ports/$p
+			done
 			;;
 
 		"port_state")
 			[ -n "$port_state" ] && \
 				echo $port_state > /sys/class/leds/${sysfs}/port_state
-			;;
-
-		"morse")
-			echo $message > /sys/class/leds/${sysfs}/message
-			echo $delay > /sys/class/leds/${sysfs}/delay
 			;;
 
 		"gpio")
@@ -118,6 +117,18 @@ load_led() {
 
 start() {
 	[ -e /sys/class/leds/ ] && {
+		[ -s /var/run/led.state ] && {
+			local led trigger brightness
+			while read led trigger brightness; do
+				[ -e "/sys/class/leds/$led/trigger" ] && \
+					echo "$trigger" > "/sys/class/leds/$led/trigger"
+
+				[ -e "/sys/class/leds/$led/brightness" ] && \
+					echo "$brightness" > "/sys/class/leds/$led/brightness"
+			done < /var/run/led.state
+			rm /var/run/led.state
+		}
+
 		config_load system
 		config_foreach load_led led
 	}

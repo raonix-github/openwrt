@@ -269,13 +269,7 @@ static void swconfig_defaults_init(struct switch_dev *dev)
 }
 
 
-static struct genl_family switch_fam = {
-	.id = GENL_ID_GENERATE,
-	.name = "switch",
-	.hdrsize = 0,
-	.version = 1,
-	.maxattr = SWITCH_ATTR_MAX,
-};
+static struct genl_family switch_fam;
 
 static const struct nla_policy switch_policy[SWITCH_ATTR_MAX+1] = {
 	[SWITCH_ATTR_ID] = { .type = NLA_U32 },
@@ -506,7 +500,7 @@ swconfig_lookup_attr(struct switch_dev *dev, struct genl_info *info,
 	struct genlmsghdr *hdr = nlmsg_data(info->nlhdr);
 	const struct switch_attrlist *alist;
 	const struct switch_attr *attr = NULL;
-	int attr_id;
+	unsigned int attr_id;
 
 	/* defaults */
 	struct switch_attr *def_list;
@@ -590,13 +584,20 @@ swconfig_parse_ports(struct sk_buff *msg, struct nlattr *head,
 	val->len = 0;
 	nla_for_each_nested(nla, head, rem) {
 		struct nlattr *tb[SWITCH_PORT_ATTR_MAX+1];
-		struct switch_port *port = &val->value.ports[val->len];
+		struct switch_port *port;
 
 		if (val->len >= max)
 			return -EINVAL;
 
+		port = &val->value.ports[val->len];
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0)
 		if (nla_parse_nested(tb, SWITCH_PORT_ATTR_MAX, nla,
 				port_policy))
+#else
+		if (nla_parse_nested(tb, SWITCH_PORT_ATTR_MAX, nla,
+				port_policy, NULL))
+#endif
 			return -EINVAL;
 
 		if (!tb[SWITCH_PORT_ID])
@@ -617,7 +618,11 @@ swconfig_parse_link(struct sk_buff *msg, struct nlattr *nla,
 {
 	struct nlattr *tb[SWITCH_LINK_ATTR_MAX + 1];
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0)
 	if (nla_parse_nested(tb, SWITCH_LINK_ATTR_MAX, nla, link_policy))
+#else
+	if (nla_parse_nested(tb, SWITCH_LINK_ATTR_MAX, nla, link_policy, NULL))
+#endif
 		return -EINVAL;
 
 	link->duplex = !!tb[SWITCH_LINK_FLAG_DUPLEX];
@@ -634,6 +639,9 @@ swconfig_set_attr(struct sk_buff *skb, struct genl_info *info)
 	struct switch_dev *dev;
 	struct switch_val val;
 	int err = -EINVAL;
+
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
 
 	dev = swconfig_get_dev(info);
 	if (!dev)
@@ -888,7 +896,7 @@ swconfig_get_attr(struct sk_buff *skb, struct genl_info *info)
 	default:
 		pr_debug("invalid type in attribute\n");
 		err = -EINVAL;
-		goto error;
+		goto nla_put_failure;
 	}
 	genlmsg_end(msg, hdr);
 	err = msg->len;
@@ -1022,16 +1030,19 @@ static struct genl_ops swconfig_ops[] = {
 	},
 	{
 		.cmd = SWITCH_CMD_SET_GLOBAL,
+		.flags = GENL_ADMIN_PERM,
 		.doit = swconfig_set_attr,
 		.policy = switch_policy,
 	},
 	{
 		.cmd = SWITCH_CMD_SET_VLAN,
+		.flags = GENL_ADMIN_PERM,
 		.doit = swconfig_set_attr,
 		.policy = switch_policy,
 	},
 	{
 		.cmd = SWITCH_CMD_SET_PORT,
+		.flags = GENL_ADMIN_PERM,
 		.doit = swconfig_set_attr,
 		.policy = switch_policy,
 	},
@@ -1041,6 +1052,19 @@ static struct genl_ops swconfig_ops[] = {
 		.policy = switch_policy,
 		.done = swconfig_done,
 	}
+};
+
+static struct genl_family switch_fam = {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+	.id = GENL_ID_GENERATE,
+#endif
+	.name = "switch",
+	.hdrsize = 0,
+	.version = 1,
+	.maxattr = SWITCH_ATTR_MAX,
+	.module = THIS_MODULE,
+	.ops = swconfig_ops,
+	.n_ops = ARRAY_SIZE(swconfig_ops),
 };
 
 #ifdef CONFIG_OF
@@ -1104,6 +1128,11 @@ register_switch(struct switch_dev *dev, struct net_device *netdev)
 			dev->alias = netdev->name;
 	}
 	BUG_ON(!dev->alias);
+
+	/* Make sure swdev_id doesn't overflow */
+	if (swdev_id == INT_MAX) {
+		return -ENOMEM;
+	}
 
 	if (dev->ports > 0) {
 		dev->portbuf = kzalloc(sizeof(struct switch_port) *
@@ -1209,8 +1238,12 @@ static int __init
 swconfig_init(void)
 {
 	INIT_LIST_HEAD(&swdevs);
-	
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
 	return genl_register_family_with_ops(&switch_fam, swconfig_ops);
+#else
+	return genl_register_family(&switch_fam);
+#endif
 }
 
 static void __exit
@@ -1221,4 +1254,3 @@ swconfig_exit(void)
 
 module_init(swconfig_init);
 module_exit(swconfig_exit);
-

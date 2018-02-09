@@ -8,12 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=e2fsprogs
-PKG_VERSION:=1.42.13
-PKG_MD5SUM:=bc759fc62666786f5436e2075beb3265
+PKG_CPE_ID:=cpe:/a:e2fsprogs_project:e2fsprogs
+PKG_VERSION:=1.43.7
+PKG_HASH:=2a6367289047d68d9ba6a46cf89ab9a1efd0556cde02a51ebaf414ff51edded9
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=@SF/e2fsprogs
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
+PKG_SOURCE_URL:=@KERNEL/linux/kernel/people/tytso/e2fsprogs/v$(PKG_VERSION)/
 
 HOST_BUILD_PARALLEL:=1
 
@@ -23,6 +24,7 @@ HOST_CFLAGS += $(FPIC)
 
 HOST_CONFIGURE_ARGS += \
 	--disable-elf-shlibs \
+	--enable-libuuid \
 	--disable-tls \
 	--disable-nls
 

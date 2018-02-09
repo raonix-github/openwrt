@@ -3,7 +3,7 @@
 #   Script for various external toolchain tasks, refer to
 #   the --help output for more information.
 #
-#   Copyright (C) 2012 Jo-Philipp Wich <jow@openwrt.org>
+#   Copyright (C) 2012 Jo-Philipp Wich <jo@mein.io>
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -35,9 +35,11 @@ LIB_SPECS="
 	rt:       librt-* librt
 	pthread:  libpthread-* libpthread
 	stdcpp:   libstdc++
+	thread_db: libthread-db
 	gcc:      libgcc_s
 	ssp:      libssp
 	gfortran: libgfortran
+	gomp:	  libgomp
 "
 
 # Binary specs
@@ -361,7 +363,7 @@ print_config() {
 	fi
 
 	local lib
-	for lib in C RT PTHREAD GCC STDCPP SSP GFORTRAN; do
+	for lib in C RT PTHREAD GCC STDCPP SSP GFORTRAN GOMP; do
 		local file
 		local spec=""
 		local llib="$(echo "$lib" | sed -e 's#.*#\L&#')"

@@ -1,15 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=trace-cmd
-PKG_VERSION:=v2.4.2
+PKG_VERSION:=v2.6.1
 PKG_RELEASE=1
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git://git.kernel.org/pub/scm/linux/kernel/git/rostedt/trace-cmd.git
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=01f8e669cb035aa911f1ee0e3f94d535cbcca78f
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-# PKG_MIRROR_MD5SUM:=6a08dfa2519a969d184e7bb5bb390620
+PKG_SOURCE_URL:=https://git.kernel.org/pub/scm/linux/kernel/git/rostedt/trace-cmd.git/snapshot/
+PKG_HASH:=4eb79001778a77c0ada10265e7f4b5515a3e21a46f0a15c2e8cc614efdf3f5df
 PKG_INSTALL:=1
 PKG_USE_MIPS16:=0
 PKG_LICENSE:=GPL-2.0

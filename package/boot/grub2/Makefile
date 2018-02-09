@@ -9,28 +9,28 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=grub
-PKG_VERSION:=2.02~beta2
+PKG_CPE_ID:=cpe:/a:gnu:grub2
+PKG_VERSION:=2.02
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL:=http://alpha.gnu.org/gnu/grub \
-	http://gnualpha.uib.no/grub/ \
-	http://mirrors.fe.up.pt/pub/gnu-alpha/grub/ \
-	http://www.nic.funet.fi/pub/gnu/alpha/gnu/grub/
-PKG_MD5SUM:=be62932eade308a364ea4bbc91295930
+PKG_SOURCE_URL:=@GNU/grub
+PKG_HASH:=810b3798d316394f94096ec2797909dbf23c858e48f7b3830826b8daa06b7b0f
 
+PKG_FIXUP:=autoreconf
 HOST_BUILD_PARALLEL:=1
 PKG_BUILD_DEPENDS:=grub2/host
 
 PKG_SSP:=0
 
+PKG_FLAGS:=nonshared
+
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/package.mk
 
 define Package/grub2
-  SUBMENU:=Boot Loaders
-  CATEGORY:=Utilities
-  SECTION:=utils
+  CATEGORY:=Boot Loaders
+  SECTION:=boot
   TITLE:=GRand Unified Bootloader
   URL:=http://www.gnu.org/software/grub/
   DEPENDS:=@TARGET_x86||TARGET_x86_64
@@ -39,6 +39,7 @@ endef
 define Package/grub2-editenv
   CATEGORY:=Utilities
   SECTION:=utils
+  SUBMENU:=Boot Loaders
   TITLE:=Grub2 Environment editor
   URL:=http://www.gnu.org/software/grub/
   DEPENDS:=@TARGET_x86||TARGET_x86_64
@@ -50,6 +51,9 @@ endef
 
 HOST_BUILD_PREFIX := $(STAGING_DIR_HOST)
 
+CONFIGURE_VARS += \
+	grub_build_mkfont_excuse="don't want fonts"
+
 CONFIGURE_ARGS += \
 	--target=$(REAL_GNU_TARGET_NAME) \
 	--disable-werror \
@@ -58,7 +62,11 @@ CONFIGURE_ARGS += \
 	--disable-libzfs \
 	--disable-grub-mkfont
 
+HOST_CONFIGURE_VARS += \
+	grub_build_mkfont_excuse="don't want fonts"
+
 HOST_CONFIGURE_ARGS += \
+	--disable-grub-mkfont \
 	--target=$(REAL_GNU_TARGET_NAME) \
 	--sbindir="$(STAGING_DIR_HOST)/bin" \
 	--disable-werror \

@@ -2,18 +2,12 @@
 
 #include "rt3050.dtsi"
 
-/ {
-	compatible = "XDXRN502J", "ralink,rt3052-soc";
-	model = "XDX RN502J";
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
 
-	pinctrl {
-		state_default: pinctrl0 {
-			gpio {
-				ralink,group = "spi", "i2c", "jtag", "rgmii", "mdio", "uartf";
-				ralink,function = "gpio";
-			};
-		};
-	};
+/ {
+	compatible = "unbranded,xdxrn502j", "ralink,rt3052-soc";
+	model = "XDX RN502J";
 
 	cfi@1f000000 {
 		compatible = "cfi-flash";
@@ -47,29 +41,17 @@
 		};
 	};
 
-	ethernet@10100000 {
-		mtd-mac-address = <&factory 0x28>;
-	};
-
-	esw@10110000 {
-		mediatek,portmap = <0x3e>;
-	};
-
-	wmac@10180000 {
-		ralink,mtd-eeprom = <&factory 0>;
-	};
-
 	gpio-leds {
 		compatible = "gpio-leds";
 
 		wifi {
 			label = "xdxrn502j:green:wifi";
-			gpios = <&gpio0 7 1>;
+			gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
 		};
 
 		power {
 			label = "xdxrn502j:green:power";
-			gpios = <&gpio0 9 1>;
+			gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
 		};
 	};
 
@@ -81,12 +63,33 @@
 
 		reset {
 			label = "reset";
-			gpios = <&gpio0 10 1>;
-			linux,code = <0x198>;
+			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
 		};
 	};
+};
 
-	otg@101c0000 {
-		status = "okay";
+&pinctrl {
+	state_default: pinctrl0 {
+		gpio {
+			ralink,group = "spi", "i2c", "jtag", "rgmii", "mdio", "uartf";
+			ralink,function = "gpio";
+		};
 	};
+};
+
+&ethernet {
+	mtd-mac-address = <&factory 0x28>;
+};
+
+&esw {
+	mediatek,portmap = <0x3e>;
+};
+
+&wmac {
+	ralink,mtd-eeprom = <&factory 0>;
+};
+
+&otg {
+	status = "okay";
 };

@@ -8,21 +8,20 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tcpdump
-PKG_VERSION:=4.5.1
-PKG_RELEASE:=4
+PKG_VERSION:=4.9.2
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://www.tcpdump.org/release/ \
-	http://ftp.gwdg.de/pub/misc/tcpdump/ \
-	http://www.at.tcpdump.org/ \
-	http://www.br.tcpdump.org/
-PKG_MD5SUM:=973a2513d0076e34aa9da7e15ed98e1b
+PKG_SOURCE_URL:=http://www.us.tcpdump.org/release/ \
+	http://www.tcpdump.org/release/
+PKG_HASH:=798b3536a29832ce0cbb07fafb1ce5097c95e308a6f592d14052e1ef1505fe79
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_BUILD_PARALLEL:=1
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=BSD-3-Clause
+PKG_CPE_ID:=cpe:/a:tcpdump:tcpdump
 
 PKG_INSTALL:=1
 
@@ -77,7 +76,6 @@ endif
 
 MAKE_FLAGS += \
 	CCOPT="$(TARGET_CFLAGS)" INCLS="-I. $(TARGET_CPPFLAGS)"
-
 
 define Package/tcpdump/install
 	$(INSTALL_DIR) $(1)/usr/sbin

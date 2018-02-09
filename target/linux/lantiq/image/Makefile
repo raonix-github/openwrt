@@ -8,257 +8,24 @@
 # boards missing since devicetree update
 #EASY50712 ARV3527P
 
-JFFS2_BLOCKSIZE = 64k 128k 256k
-
 KERNEL_LOADADDR = 0x80002000
 KERNEL_ENTRY = 0x80002000
 
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
 
-LOADER_MAKE := $(NO_TRACE_MAKE) -C lzma-loader KDIR=$(KDIR)
-
-define Image/BuildLoader/Template
-	-rm -rf $(KDIR)/lzma-loader
-	$(LOADER_MAKE) LOADER=loader$(2)-$(1).bin\
-		LZMA_TEXT_START=0x80a00000 \
-		LOADADDR=0x80002000 \
-		LOADER_DATA="$(KDIR)/vmlinux$(2)-$(1).lzma" BOARD="$(1)" \
-		compile loader.bin
-endef
-
-
-define CompressLzma
-	$(STAGING_DIR_HOST)/bin/lzma e $(1) $(2)
-endef
-
-define PatchKernelLzma
-	cp $(KDIR)/vmlinux$(2) $(KDIR)/vmlinux$(2)-$(1)
-	$(LINUX_DIR)/scripts/dtc/dtc -O dtb -o $(KDIR)/$(1).dtb ../dts/$(1).dts
-	cat $(KDIR)/vmlinux$(2)-$(1) $(KDIR)/$(1).dtb > $(KDIR)/vmlinux$(2)-$(1).tmp
-	$(call CompressLzma,$(KDIR)/vmlinux$(2)-$(1).tmp,$(KDIR)/vmlinux$(2)-$(1).lzma)
-endef
-
-define MkImageLzma
-	mkimage -A mips -O linux -T kernel -a 0x80002000 -C lzma \
-		-e 0x80002000 -n 'MIPS OpenWrt Linux-$(LINUX_VERSION)' \
-		-d $(KDIR)/vmlinux$(2)-$(1).lzma $(KDIR)/uImage-$(1)$(2)
-endef
-
-define MkImageEVA
-	lzma2eva 0x80002000 0x80002000 $(KDIR)/vmlinux$(2)-$(1).lzma $(KDIR)/$(1)$(2).eva.prealign
-	dd if=$(KDIR)/$(1)$(2).eva.prealign of=$(KDIR)/$(1)$(2).eva.align.64k bs=64k conv=sync
-	dd if=$(KDIR)/$(1)$(2).eva.prealign of=$(KDIR)/$(1)$(2).eva.align.128k bs=128k conv=sync
-	cat ./eva.dummy.squashfs >> $(KDIR)/$(1)$(2).eva.align.64k
-endef
-
-define Image/Build/squashfs
-	cat $(KDIR)/uImage-$(2) $(KDIR)/root.$(1) > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image
-	$(call prepare_generic_squashfs,$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image)
-endef
-
-define Image/BuildNAND/squashfs
-
-ifneq ($($(PROFILE)_UBI_OPTS),)
-	$(call prepare_generic_squashfs,$(KDIR)/root.$(1))
-	$(call Image/Build/UbinizeImage,$(PROFILE),,squashfs,$($(PROFILE)_UBI_OPTS))
-	$(call Image/Build/SysupgradeNAND,$(PROFILE),$(1),$(KDIR)/uImage-$(PROFILE))
-endif
-endef
-
-DGN3500_SKERNEL=0x50000
-DGN3500_SKERNEL_DECIMAL=327680
-define Image/BuildDGN3500/squashfs
-	dd if=/dev/zero of=$(BIN_DIR)/$(IMG_PREFIX)-pad bs=$(DGN3500_SKERNEL_DECIMAL) count=1
-	cat $(BIN_DIR)/$(IMG_PREFIX)-pad $(KDIR)/uImage-$(2) $(KDIR)/root.$(1) > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepad.img
-	rm -r $(BIN_DIR)/$(IMG_PREFIX)-pad
-	dd if=/dev/zero ibs=16M count=1 | tr "\000" "\377" > $(BIN_DIR)/$(IMG_PREFIX)-pwf
-	cp $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepad.img $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadNA.img
-	dgn3500sum $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadNA.img $(DGN3500_SKERNEL) NA
-	$(call prepare_generic_squashfs,$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadNA.img)
-	cp $(BIN_DIR)/$(IMG_PREFIX)-pwf $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-NA.img
-	dd if=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadNA.img of=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-NA.img conv=notrunc
-	dd if=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadNA.img of=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-sysupgrade-NA.image bs=$(DGN3500_SKERNEL_DECIMAL) skip=1
-	rm -r $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadNA.img
-	mv $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepad.img $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadWW.img
-	dgn3500sum $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadWW.img $(DGN3500_SKERNEL) WW
-	$(call prepare_generic_squashfs,$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadWW.img)
-	mv $(BIN_DIR)/$(IMG_PREFIX)-pwf $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-WW.img
-	dd if=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadWW.img of=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-WW.img conv=notrunc
-	dd if=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadWW.img of=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-sysupgrade-WW.image bs=$(DGN3500_SKERNEL_DECIMAL) skip=1
-	rm -r $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepadWW.img
-endef
-
-define Image/BuildDGN3500B/squashfs
-	dd if=/dev/zero of=$(BIN_DIR)/$(IMG_PREFIX)-pad bs=327680 count=1
-	cat $(BIN_DIR)/$(IMG_PREFIX)-pad $(KDIR)/uImage-$(2) $(KDIR)/root.$(1) > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepad.img
-	rm -r $(BIN_DIR)/$(IMG_PREFIX)-pad
-	dd if=/dev/zero ibs=16M count=1 | tr "\000" "\377" > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory.img
-	dgn3500sum $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepad.img $(DGN3500_SKERNEL) DE
-	$(call prepare_generic_squashfs,$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepad.img)
-	dd if=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepad.img of=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory.img conv=notrunc
-	dd if=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepad.img of=$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-sysupgrade.image bs=$(DGN3500_SKERNEL_DECIMAL) skip=1
-	rm -r $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-factory-prepad.img
-	dgn3500sum $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1)-sysupgrade.image $(DGN3500_SKERNEL) DE
-endef
-
-
-define Image/BuildEVA/squashfs
-	cat $(KDIR)/$(2).eva.align.64k $(KDIR)/root.$(1) > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image.eva
-	$(call prepare_generic_squashfs,$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image.eva)
-endef
-
-define Image/BuildEVA/ubifs
-
-ifneq ($($(PROFILE)_UBIFS_OPTS),)
-	$(CP) $(KDIR)/root.ubifs $(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-rootfs.ubifs
-endif
-endef
-
-define Image/BuildEVA/ubi
-
-ifneq ($($(PROFILE)_UBI_OPTS),)
-	$(CP) $(KDIR)/root.ubi $(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-rootfs.ubi
-	$(CP) $(KDIR)/root-overlay.ubi $(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-rootfs-overlay.ubi
-endif
-endef
-
-define Image/BuildLoader/squashfs
-	dd if=$(KDIR)/loader-$(2).bin of=$(KDIR)/loader-$(2).bin.padded bs=3072k conv=sync
-	cat $(KDIR)/loader-$(2).bin.padded $(KDIR)/root.$(1) > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image
-	$(call prepare_generic_squashfs,$(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image)
-endef
-
-define Image/BuildEVA/jffs2-128k
-	cat $(KDIR)/$(2).eva.align.128k $(KDIR)/root.$(1) > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image.eva
-endef
-
-define Image/Build/jffs2-64k
-	dd if=$(KDIR)/uImage-$(2) of=$(KDIR)/uImage-$(2)-$(1) bs=64k conv=sync
-	cat $(KDIR)/uImage-$(2)-$(1) $(KDIR)/root.$(1) > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image
-endef
-
-define Image/Build/jffs2-128k
-	dd if=$(KDIR)/uImage-$(2) of=$(KDIR)/uImage-$(2)-$(1) bs=128k conv=sync
-	cat $(KDIR)/uImage-$(2)-$(1) $(KDIR)/root.$(1) > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image
-endef
-
-define Image/Build/jffs2-256k
-	dd if=$(KDIR)/uImage-$(2) of=$(KDIR)/uImage-$(2)-$(1) bs=256k conv=sync
-	cat $(KDIR)/uImage-$(2)-$(1) $(KDIR)/root.$(1) > $(BIN_DIR)/$(IMG_PREFIX)-$(2)-$(1).image
-endef
-
-define Image/Build/ubifs
-
-ifneq ($($(PROFILE)_UBIFS_OPTS),)
-	$(CP) $(KDIR)/root.ubifs $(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-rootfs.ubifs
-endif
-endef
-
-define Image/Build/ubi
-
-ifneq ($($(PROFILE)_UBI_OPTS),)
-	$(CP) $(KDIR)/root.ubi $(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-rootfs.ubi
-	$(CP) $(KDIR)/root-overlay.ubi $(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-rootfs-overlay.ubi
-endif
-endef
-
-
-define Image/BuildNAND/ubifs
-
-ifneq ($($(PROFILE)_UBIFS_OPTS),)
-ifneq ($($(PROFILE)_UBI_OPTS),)
-	$(call Image/Build/UbinizeImage,$(PROFILE),,ubifs,$($(PROFILE)_UBI_OPTS))
-	$(call Image/Build/SysupgradeNAND,$(PROFILE),$(1),$(KDIR)/uImage-$(PROFILE))
-endif
-endif
-endef
-
-
-define Image/InstallKernel/Template
-
-ifneq ($(CONFIG_TARGET_ROOTFS_INCLUDE_KERNEL),)
-	$(INSTALL_DIR) $(TARGET_DIR)/boot
-
-ifneq ($(CONFIG_TARGET_ROOTFS_INCLUDE_UIMAGE),)
-	$(CP) $(BIN_DIR)/$(IMG_PREFIX)-$(1)-uImage $(TARGET_DIR)/boot/
-	ln -sf $(IMG_PREFIX)-$(1)-uImage $(TARGET_DIR)/boot/uImage
+ifeq ($(SUBTARGET),xway)
+  UBIFS_OPTS := -m 512 -e 15872 -c 1959
+else
+  UBIFS_OPTS := -m 2048 -e 126KiB -c 4096
 endif
 
-ifneq ($(CONFIG_TARGET_ROOTFS_INCLUDE_ZIMAGE),)
-	$(CP) $(BIN_DIR)/$(IMG_PREFIX)-$(1)-zImage $(TARGET_DIR)/boot/
-	ln -sf $(IMG_PREFIX)-$(1)-zImage $(TARGET_DIR)/boot/zImage
-endif
-endif
-
-ifneq ($(CONFIG_TARGET_ROOTFS_INCLUDE_DTB),)
-	$(INSTALL_DIR) $(TARGET_DIR)/boot
-
-ifneq ($(1),)
-	$(CP) $(KDIR)/$(1).dtb $(TARGET_DIR)/boot/
-endif
-endif
+define Build/append-avm-fakeroot
+	cat ./eva.dummy.squashfs >> $@
 endef
 
-define Image/BuildKernel/Template
-	$(call PatchKernelLzma,$(1))
-	$(call MkImageLzma,$(1))
-	$(CP) $(KDIR)/uImage-$(1) $(BIN_DIR)/$(IMG_PREFIX)-$(1)-uImage
-ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
-	$(call PatchKernelLzma,$(1),-initramfs)
-	$(call MkImageLzma,$(1),-initramfs)
-	$(CP) $(KDIR)/uImage-$(1)-initramfs $(BIN_DIR)/$(IMG_PREFIX)-$(1)-uImage-initramfs
-endif
-endef
-
-define Image/BuildKernelLoader/Template
-	$(CP) $(KDIR)/loader-$(1).bin $(BIN_DIR)/$(IMG_PREFIX)-$(1)-vmlinux-loader
-	$(CP) $(KDIR)/vmlinux-$(1) $(BIN_DIR)/$(IMG_PREFIX)-$(1)-vmlinux
-ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
-	$(CP) $(KDIR)/loader-initramfs-$(1).bin $(BIN_DIR)/$(IMG_PREFIX)-$(1)-vmlinux-initramfs-loader
-	$(CP) $(KDIR)/vmlinux-initramfs-$(1) $(BIN_DIR)/$(IMG_PREFIX)-$(1)-vmlinux-initramfs
-endif
-endef
-
-define Image/Prepare/Profile
-	$(call PatchKernelLzma,$(1))
-	$(call Image/BuildLoader/Template,$(1))
-ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
-	$(call PatchKernelLzma,$(1),-initramfs)
-	$(call Image/BuildLoader/Template,$(1),-initramfs)
-endif
-endef
-
-define Image/BuildKernelEVA/Template
-	$(call PatchKernelLzma,$(1))
-	$(call MkImageEVA,$(1))
-	$(CP) $(KDIR)/$(1).eva.align.64k $(BIN_DIR)/$(IMG_PREFIX)-$(1).eva.align.64k
-	$(CP) $(KDIR)/$(1).eva.align.128k $(BIN_DIR)/$(IMG_PREFIX)-$(1).eva.align.128k
-ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
-	$(call PatchKernelLzma,$(1),-initramfs)
-	$(call MkImageEVA,$(1),-initramfs)
-	$(CP) $(KDIR)/$(1)-initramfs.eva.align.64k $(BIN_DIR)/$(IMG_PREFIX)-$(1)-initramfs.eva.align.64k
-	$(CP) $(KDIR)/$(1)-initramfs.eva.align.128k $(BIN_DIR)/$(IMG_PREFIX)-$(1)-initramfs.eva.align.128k
-endif
-endef
-
-
-### Kernel scripts ###
-define Build/append-dtb
-	$(call Image/BuildDTB,../dts/$(DEVICE_DTS).dts,$@.dtb)
-	cat $@.dtb >> $@
-endef
-
-define Build/tplink-fw
-	mktplinkfw2 -c -B $(BOARD_ID) -s \
-		-k $@ -o $@.new
-	mv $@.new $@
-endef
-
-define Build/mktplinkfw2
-	mktplinkfw2 -B $(BOARD_ID) -s -a 0x4 -j \
-		-k $(word 1,$^) -r $(word 2,$^) \
-		-o $@
+define Build/dgn3500-sercom-footer
+	$(STAGING_DIR_HOST)/bin/dgn3500sum $@ $(1) $(2)
 endef
 
 define Build/mkbrncmdline
@@ -267,184 +34,758 @@ define Build/mkbrncmdline
 endef
 
 define Build/mkbrnimg
-   mkbrnimg -s $(SIGNATURE) -m $(MAGIC) -p $(CRC32_POLY) -o $@ $(word 1,$^) $(word 2,$^)
+   mkbrnimg -s $(SIGNATURE) -m $(MAGIC) -p $(CRC32_POLY) -o $@ $(IMAGE_KERNEL) $(IMAGE_ROOTFS)
+endef
+
+define Build/fullimage
+	mkimage -A mips -O linux -C lzma -T filesystem -a 0x00  \
+		-e 0x00 -n '$(VERSION_DIST) RootFS' \
+		-d $(IMAGE_ROOTFS) $(IMAGE_ROOTFS).new
+
+	cat $(IMAGE_KERNEL) $(IMAGE_ROOTFS).new > $@.tmp
+
+	mkimage -A mips -O linux -T multi -a 0x00 -C none \
+		-e 0x00 -n 'OpenWrt fullimage' \
+		-d $@.tmp $@
+
+	rm $(IMAGE_ROOTFS).new
+	rm $@.tmp
 endef
 
 # Shared device definition: applies to every defined device
 define Device/Default
-  PROFILES = Default $$(DEVICE_PROFILE)
+  PROFILES = Default
   KERNEL_DEPENDS = $$(wildcard ../dts/$$(DEVICE_DTS).dts)
   KERNEL_INITRAMFS_NAME = $$(KERNEL_NAME)-initramfs
   KERNEL := kernel-bin | append-dtb | lzma | uImage lzma
   KERNEL_INITRAMFS := kernel-bin | append-dtb | lzma | uImage lzma
   FILESYSTEMS := squashfs
-  DEVICE_PROFILE :=
-  DEVICE_DTS :=
+  DEVICE_DTS_DIR := ../dts
+  IMAGE_SIZE :=
+  SUPPORTED_DEVICES := $(subst _,$(comma),$(1))
   IMAGES := sysupgrade.bin
-  IMAGE/sysupgrade.bin := append-kernel | append-rootfs | pad-rootfs
+  IMAGE/sysupgrade.bin := append-kernel | append-rootfs | pad-rootfs | append-metadata | check-size $$$$(IMAGE_SIZE)
 endef
-DEVICE_VARS += DEVICE_PROFILE DEVICE_DTS
+DEVICE_VARS += IMAGE_SIZE
 
-define Device/lantiqTpLink
-  KERNEL := kernel-bin | append-dtb | lzma
-  KERNEL_INITRAMFS := kernel-bin | append-dtb | lzma | tplink-fw
-  IMAGES := sysupgrade.bin
-  IMAGE/sysupgrade.bin := mktplinkfw2
+define Device/NAND/xway
+  BLOCKSIZE := 16k
+  PAGESIZE := 512
+  SUBPAGESIZE := 256
+  FILESYSTEMS += ubifs
 endef
-DEVICE_VARS += BOARD_ID
+
+define Device/NAND/xrx200
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  SUBPAGESIZE := 512
+  FILESYSTEMS += ubifs
+endef
+
+define Device/NAND
+  $(Device/NAND/$(SUBTARGET))
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
 
 define Device/lantiqBrnImage
   KERNEL := kernel-bin | append-dtb | mkbrncmdline | lzma-no-dict
   IMAGES := factory.bin
-  IMAGE/factory.bin := mkbrnimg
+  IMAGE/factory.bin := mkbrnimg | check-size $$$$(IMAGE_SIZE)
 endef
 DEVICE_VARS += SIGNATURE MAGIC CRC32_POLY
 
-define lantiqTpLink
-  define Device/$(1)
-    $$(Device/lantiqTpLink)
-    DEVICE_PROFILE := $(1)
-    DEVICE_DTS := $(1)
-    BOARD_ID := $(2)
-  endef
-  TARGET_DEVICES += $(1)
+define Device/lantiqFullImage
+  KERNEL := kernel-bin | append-dtb | lzma | uImage lzma | pad-offset 4 0
+  IMAGES := sysupgrade.bin fullimage.bin
+  IMAGE/fullimage.bin := fullimage | check-size $$$$(IMAGE_SIZE)
 endef
 
-define lantiqImage
-  define Device/$(1)
-    $$(Device/lantiqImage)
-    DEVICE_PROFILE := $(1)
-    DEVICE_DTS := $(if $(2),$(2),$(1))
-  endef
-  TARGET_DEVICES += $(1)
+define Device/AVM
+  KERNEL := kernel-bin | append-dtb | lzma | eva-image
+  IMAGE/sysupgrade.bin := append-kernel | pad-to 64k | append-avm-fakeroot | \
+	append-rootfs | pad-rootfs | append-metadata | check-size $$$$(IMAGE_SIZE)
 endef
 
-define lantiqBrnImage
-  define Device/$(1)
-    $$(Device/lantiqBrnImage)
-    DEVICE_PROFILE := $(1)
-    DEVICE_DTS := $(1)
-    SIGNATURE := $(2)
-    MAGIC := $(3)
-    CRC32_POLY := $(4)
-  endef
-  TARGET_DEVICES += $(1)
+ifeq ($(SUBTARGET),ase)
+
+define Device/allnet_all0333cj
+  IMAGE_SIZE := 3700k
+  DEVICE_DTS := ALL0333CJ
+  DEVICE_TITLE := Allnet ALL0333CJ
+  DEVICE_PACKAGES := kmod-ltq-adsl-ase kmod-ltq-adsl-ase-mei \
+	kmod-ltq-adsl-ase-fw-b kmod-ltq-atm-ase \
+	ltq-adsl-app ppp-mod-pppoe
 endef
+TARGET_DEVICES += allnet_all0333cj
 
-ifeq ($(CONFIG_TARGET_lantiq_falcon),y)
-
-$(eval $(call lantiqImage,EASY98000NOR))
-$(eval $(call lantiqImage,EASY98000SFLASH))
+define Device/netgear_dgn1000b
+  IMAGE_SIZE := 6000k
+  DEVICE_DTS := DGN1000B
+  DEVICE_TITLE := Netgear DGN1000B
+  DEVICE_PACKAGES := kmod-ltq-adsl-ase kmod-ltq-adsl-ase-mei \
+	kmod-ltq-adsl-ase-fw-b kmod-ltq-atm-ase \
+	ltq-adsl-app ppp-mod-pppoe
+  SUPPORTED_DEVICES += DGN1000B
+endef
+TARGET_DEVICES += netgear_dgn1000b
 
 endif
 
+ifeq ($(SUBTARGET),xway_legacy)
 
-ifeq ($(CONFIG_TARGET_lantiq_ase),y)
+define Device/arcadyan_arv4520pw
+  IMAGE_SIZE := 3648k
+  DEVICE_DTS := ARV4520PW
+  DEVICE_TITLE := Easybox 800, WAV-281 - ARV4520PW
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-b kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-rt61-pci wpad-mini
+  SUPPORTED_DEVICES += ARV4520PW
+endef
+TARGET_DEVICES += arcadyan_arv4520pw
 
-$(eval $(call lantiqImage,DGN1000B))
+define Device/arcadyan_arv4525pw
+  IMAGE_SIZE := 3776k
+  DEVICE_DTS := ARV4525PW
+  DEVICE_TITLE := Speedport W502V Typ A - ARV4525PW
+  DEVICE_PACKAGES := kmod-ath5k wpad-mini \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-b kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa -swconfig
+  SUPPORTED_DEVICES += ARV4525PW
+endef
+TARGET_DEVICES += arcadyan_arv4525pw
+
+define Device/arcadyan_arv452cqw
+  IMAGE_SIZE := 3776k
+  DEVICE_DTS := ARV452CQW
+  DEVICE_TITLE := Easybox 801 - ARV452CQW
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ath5k wpad-mini \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-b kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa
+  SUPPORTED_DEVICES += ARV452CQW
+endef
+TARGET_DEVICES += arcadyan_arv452cqw
+
+define Device/arcadyan_arv4518pwr01
+  IMAGE_SIZE := 3776k
+  DEVICE_DTS := ARV4518PWR01
+  DEVICE_TITLE := ARV4518PWR01
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-a kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ath5k wpad-mini
+  SUPPORTED_DEVICES += ARV4518PWR01
+endef
+TARGET_DEVICES += arcadyan_arv4518pwr01
+
+define Device/arcadyan_arv4518pwr01a
+  IMAGE_SIZE := 3776k
+  DEVICE_DTS := ARV4518PWR01A
+  DEVICE_TITLE := ARV4518PWR01A
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-a kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ath5k wpad-mini
+  SUPPORTED_DEVICES += ARV4518PWR01A
+endef
+TARGET_DEVICES += arcadyan_arv4518pwr01a
 
 endif
 
-
-ifeq ($(CONFIG_TARGET_lantiq_xway),y)
+ifeq ($(SUBTARGET),xway)
 
 # Danube
-Image/BuildKernel/Profile/BTHOMEHUBV2B=$(call Image/BuildKernel/Template,BTHOMEHUBV2B)
-Image/Build/Profile/BTHOMEHUBV2B=$(call Image/BuildNAND/$(1),$(1),BTHOMEHUBV2B)
 
-$(eval $(call lantiqImage,EASY50712))
-$(eval $(call lantiqImage,ACMP252))
-$(eval $(call lantiqImage,ARV4510PW))
-$(eval $(call lantiqImage,ARV4525PW))
-$(eval $(call lantiqImage,ARV7525PW))
-$(eval $(call lantiqImage,ARV4518PWR01))
-$(eval $(call lantiqImage,ARV4518PWR01A))
-$(eval $(call lantiqImage,ARV4519PW))
-$(eval $(call lantiqImage,ARV4520PW))
-$(eval $(call lantiqImage,ARV452CQW))
-$(eval $(call lantiqImage,ARV7510PW22))
-$(eval $(call lantiqImage,ARV7518PW))
-$(eval $(call lantiqImage,ARV7519PW))
-$(eval $(call lantiqImage,ARV752DPW))
-$(eval $(call lantiqImage,ARV752DPW22))
-$(eval $(call lantiqImage,ARV8539PW22))
-$(eval $(call lantiqImage,GIGASX76X))
+define Device/bt_homehub-v2b
+  $(Device/NAND)
+  BOARD_NAME := BTHOMEHUBV2B
+  DEVICE_DTS := BTHOMEHUBV2B
+  DEVICE_TITLE := BT Home Hub 2B
+  DEVICE_PACKAGES := kmod-usb-dwc2 \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-a kmod-ltq-atm-danube \
+	kmod-ltq-deu-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ath9k kmod-owl-loader wpad-mini
+  SUPPORTED_DEVICES += BTHOMEHUBV2B
+endef
+TARGET_DEVICES += bt_homehub-v2b
+
+define Device/lantiq_easy50712
+  DEVICE_DTS := EASY50712
+  IMAGE_SIZE := 3776k
+  DEVICE_TITLE := Lantiq Danube - EASY50712
+endef
+TARGET_DEVICES += lantiq_easy50712
+
+define Device/audiocodes_mp-252
+  IMAGE_SIZE := 14848k
+  DEVICE_DTS := ACMP252
+  DEVICE_TITLE := AudioCodes MediaPack MP-252
+  DEVICE_PACKAGES :=  kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-a kmod-ltq-atm-danube \
+	kmod-ltq-tapi kmod-ltq-vmmc \
+	kmod-usb-ledtrig-usbport kmod-usb-dwc2 \
+	kmod-rt2800-pci \
+	ltq-adsl-app ppp-mod-pppoa \
+	wpad-mini
+  SUPPORTED_DEVICES += ACMP252
+endef
+TARGET_DEVICES += audiocodes_mp-252
+
+define Device/arcadyan_arv4510pw
+  IMAGE_SIZE := 15616k
+  DEVICE_DTS := ARV4510PW
+  DEVICE_TITLE := Wippies, Elisa - ARV4510PW
+  DEVICE_PACKAGES := kmod-usb-ledtrig-usbport kmod-usb2-pci kmod-usb-uhci \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-a kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ltq-tapi kmod-ltq-vmmc \
+	kmod-rt2800-pci kmod-ath5k wpad-mini
+  SUPPORTED_DEVICES += ARV4510PW
+endef
+TARGET_DEVICES += arcadyan_arv4510pw
+
+define Device/arcadyan_arv7525pw
+  IMAGE_SIZE := 3776k
+  DEVICE_DTS := ARV4510PW
+  DEVICE_TITLE := Speedport W303V Typ A - ARV7525PW
+  DEVICE_PACKAGES := kmod-rt2800-pci wpad-mini \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-b kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa -swconfig
+  SUPPORTED_DEVICES += ARV4510PW
+endef
+TARGET_DEVICES += arcadyan_arv7525pw
+
+define Device/arcadyan_arv4519pw
+  IMAGE_SIZE := 3776k
+  DEVICE_DTS := ARV4519PW
+  DEVICE_TITLE := Vodafone, Pirelli - ARV4519PW
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-a kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa
+  SUPPORTED_DEVICES += ARV4519PW
+endef
+TARGET_DEVICES += arcadyan_arv4519pw
+
+define Device/arcadyan_arv7506pw11
+  IMAGE_SIZE := 7808k
+  DEVICE_DTS := ARV7506PW11
+  DEVICE_TITLE := Alice/O2 IAD 4421 - ARV7506PW11
+  DEVICE_PACKAGES := kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-b kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-rt2800-pci wpad-mini
+  SUPPORTED_DEVICES += ARV7506PW11
+endef
+TARGET_DEVICES += arcadyan_arv7506pw11
+
+define Device/arcadyan_arv7510pw22
+  IMAGE_SIZE := 31232k
+  DEVICE_DTS := ARV7510PW22
+  DEVICE_TITLE := Astoria - ARV7510PW22
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-a kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ltq-tapi kmod-ltq-vmmc \
+	kmod-rt2800-pci wpad-mini \
+	kmod-usb-uhci kmod-usb2 kmod-usb2-pci
+  SUPPORTED_DEVICES += ARV7510PW22
+endef
+TARGET_DEVICES += arcadyan_arv7510pw22
+
+define Device/arcadyan_arv7518pw
+  IMAGE_SIZE := 7872k
+  DEVICE_DTS := ARV7518PW
+  DEVICE_TITLE := Astoria - ARV7518PW
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-a kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ath9k kmod-owl-loader wpad-mini
+  SUPPORTED_DEVICES += ARV7518PW
+endef
+TARGET_DEVICES += arcadyan_arv7518pw
+
+define Device/arcadyan_arv7519pw
+  IMAGE_SIZE := 15488k
+  DEVICE_DTS := ARV7519PW
+  DEVICE_TITLE := Astoria - ARV7519PW
+  DEVICE_PACKAGES := kmod-usb-dwc2 \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-a kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-rt2800-pci wpad-mini
+  SUPPORTED_DEVICES += ARV7519PW
+endef
+TARGET_DEVICES += arcadyan_arv7519pw
+
+define Device/arcadyan_arv752dpw
+  IMAGE_SIZE := 7872k
+  DEVICE_DTS := ARV752DPW
+  DEVICE_TITLE := Easybox 802 - ARV752DPW
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-b kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ltq-tapi kmod-ltq-vmmc \
+	kmod-rt2800-pci wpad-mini
+  SUPPORTED_DEVICES += ARV752DPW
+endef
+TARGET_DEVICES += arcadyan_arv752dpw
+
+define Device/arcadyan_arv752dpw22
+  IMAGE_SIZE := 7616k
+  DEVICE_DTS := ARV752DPW22
+  DEVICE_TITLE := Easybox 803 - ARV752DPW22
+  DEVICE_PACKAGES := kmod-usb2-pci kmod-usb-uhci kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-b kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ltq-tapi kmod-ltq-vmmc \
+	kmod-rt2800-pci wpad-mini
+  SUPPORTED_DEVICES += ARV752DPW22
+endef
+TARGET_DEVICES += arcadyan_arv752dpw22
+
+define Device/arcadyan_arv8539pw22
+  IMAGE_SIZE := 7616k
+  DEVICE_DTS := ARV8539PW22
+  DEVICE_TITLE := Speedport W504V Typ A - ARV8539PW22
+  DEVICE_PACKAGES := kmod-usb-dwc2 \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-b kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ath9k kmod-owl-loader wpad-mini
+  SUPPORTED_DEVICES += ARV8539PW22
+endef
+TARGET_DEVICES += arcadyan_arv8539pw22
+
+define Device/siemens_gigaset-sx76x
+  IMAGE_SIZE := 7680k
+  DEVICE_DTS := GIGASX76X
+  DEVICE_TITLE := Gigaset sx76x
+  DEVICE_PACKAGES := kmod-usb-dwc2 \
+	kmod-ltq-adsl-danube-mei kmod-ltq-adsl-danube \
+	kmod-ltq-adsl-danube-fw-b kmod-ltq-atm-danube \
+	ltq-adsl-app ppp-mod-pppoe \
+	kmod-ath5k wpad-mini
+  SUPPORTED_DEVICES += GIGASX76X
+endef
+TARGET_DEVICES += siemens_gigaset-sx76x
 
 
 # AR9
-Image/BuildKernel/Profile/BTHOMEHUBV3A=$(call Image/BuildKernel/Template,BTHOMEHUBV3A)
-Image/Build/Profile/BTHOMEHUBV3A=$(call Image/BuildNAND/$(1),$(1),BTHOMEHUBV3A)
 
-Image/BuildKernel/Profile/DGN3500=$(call Image/BuildKernel/Template,DGN3500)
-Image/Build/Profile/DGN3500=$(call Image/BuildDGN3500/$(1),$(1),DGN3500)
+define Device/bt_homehub-v3a
+  $(Device/NAND)
+  BOARD_NAME := BTHOMEHUBV3A
+  DEVICE_DTS := BTHOMEHUBV3A
+  DEVICE_TITLE := BT Home Hub 3A
+  DEVICE_PACKAGES := kmod-usb-dwc2 \
+	kmod-ltq-adsl-ar9-mei kmod-ltq-adsl-ar9 \
+	kmod-ltq-adsl-ar9-fw-a kmod-ltq-atm-ar9 \
+	kmod-ltq-deu-ar9 \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ath9k kmod-owl-loader wpad-mini \
+	uboot-envtools
+  SUPPORTED_DEVICES += BTHOMEHUBV3A
+endef
+TARGET_DEVICES += bt_homehub-v3a
 
-Image/BuildKernel/Profile/DGN3500B=$(call Image/BuildKernel/Template,DGN3500B)
-Image/Build/Profile/DGN3500B=$(call Image/BuildDGN3500B/$(1),$(1),DGN3500B)
+DGN3500_KERNEL_OFFSET_HEX=0x50000
+DGN3500_KERNEL_OFFSET_DEC=327680
+define Device/netgear_dgn3500
+  DEVICE_DTS := DGN3500
+  IMAGE_SIZE := 16000k
+  IMAGES := \
+	sysupgrade-na.bin sysupgrade.bin \
+	factory-na.img factory.img
+  IMAGE/sysupgrade-na.bin := \
+	append-kernel | append-rootfs | dgn3500-sercom-footer 0x0 "NA" | \
+	pad-rootfs | append-metadata | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := \
+	append-kernel | append-rootfs | dgn3500-sercom-footer 0x0 "WW" | \
+	pad-rootfs | append-metadata | check-size $$$$(IMAGE_SIZE)
+  IMAGE/factory-na.img := \
+	pad-extra $(DGN3500_KERNEL_OFFSET_DEC) | append-kernel | append-rootfs | \
+	dgn3500-sercom-footer $(DGN3500_KERNEL_OFFSET_HEX) "NA" | pad-rootfs | \
+	check-size 16320k | pad-to 16384k
+  IMAGE/factory.img := \
+	pad-extra $(DGN3500_KERNEL_OFFSET_DEC) | append-kernel | append-rootfs | \
+	dgn3500-sercom-footer $(DGN3500_KERNEL_OFFSET_HEX) "WW" | pad-rootfs | \
+	check-size 16320k | pad-to 16384k
+  DEVICE_TITLE := Netgear DGN3500
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ath9k kmod-owl-loader wpad-mini \
+	kmod-ltq-adsl-ar9-mei kmod-ltq-adsl-ar9 \
+	kmod-ltq-adsl-ar9-fw-a kmod-ltq-atm-ar9 \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ltq-deu-ar9
+  SUPPORTED_DEVICES += DGN3500
+endef
+TARGET_DEVICES += netgear_dgn3500
 
-$(eval $(call lantiqImage,WBMRA,WBMR))
-$(eval $(call lantiqImage,WBMRB,WBMR))
+define Device/netgear_dgn3500b
+  DEVICE_DTS := DGN3500B
+  IMAGE_SIZE := 16000k
+  IMAGES += factory.img
+  IMAGE/sysupgrade.bin := \
+	append-kernel | append-rootfs | dgn3500-sercom-footer 0x0 "DE" | \
+	pad-rootfs | append-metadata | check-size $$$$(IMAGE_SIZE)
+  IMAGE/factory.img := \
+	pad-extra $(DGN3500_KERNEL_OFFSET_DEC) | append-kernel | append-rootfs | \
+	dgn3500-sercom-footer $(DGN3500_KERNEL_OFFSET_HEX) "DE" | pad-rootfs | \
+	check-size 16320k | pad-to 16384k
+  DEVICE_TITLE := Netgear DGN3500B
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ath9k kmod-owl-loader wpad-mini \
+	kmod-ltq-adsl-ar9-mei kmod-ltq-adsl-ar9 \
+	kmod-ltq-adsl-ar9-fw-b kmod-ltq-atm-ar9 \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ltq-deu-ar9
+  SUPPORTED_DEVICES += DGN3500B
+endef
+TARGET_DEVICES += netgear_dgn3500b
 
-Image/BuildKernel/Profile/FRITZ7320=$(call Image/BuildKernelEVA/Template,FRITZ7320)
-Image/Build/Profile/FRITZ7320=$(call Image/BuildEVA/$(1),$(1),FRITZ7320)
+define Device/buffalo_wbmr-hp-g300h-a
+  IMAGE_SIZE := 31488k
+  DEVICE_DTS := WBMR
+  DEVICE_TITLE := Buffalo WBMR-HP-G300H (A) - WBMR
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-ar9-mei kmod-ltq-adsl-ar9 \
+	kmod-ltq-adsl-ar9-fw-a kmod-ltq-atm-ar9 \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ath9k kmod-owl-loader wpad-mini
+  SUPPORTED_DEVICES := WBMR buffalo,wbmr-hp-g300h
+endef
+TARGET_DEVICES += buffalo_wbmr-hp-g300h-a
 
-$(eval $(call lantiqImage,GR7000))
-$(eval $(call lantiqImage,H201L))
-$(eval $(call lantiqImage,P2601HNFX))
+define Device/buffalo_wbmr-hp-g300h-b
+  IMAGE_SIZE := 31488k
+  DEVICE_DTS := WBMR
+  DEVICE_TITLE := Buffalo WBMR-HP-G300H (B) - WBMR
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-adsl-ar9-mei kmod-ltq-adsl-ar9 \
+	kmod-ltq-adsl-ar9-fw-b kmod-ltq-atm-ar9 \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ath9k kmod-owl-loader wpad-mini
+  SUPPORTED_DEVICES := WBMR buffalo,wbmr-hp-g300h
+endef
+TARGET_DEVICES += buffalo_wbmr-hp-g300h-b
+
+define Device/avm_fritz7320
+  $(Device/AVM)
+  DEVICE_DTS := FRITZ7320
+  IMAGE_SIZE := 15744k
+  DEVICE_TITLE := 1&1 HomeServer - FRITZ7320
+  DEVICE_PACKAGES := kmod-ath9k kmod-owl-loader wpad-mini \
+	kmod-ltq-adsl-ar9-mei kmod-ltq-adsl-ar9 \
+	kmod-ltq-adsl-ar9-fw-b kmod-ltq-atm-ar9 \
+	ltq-adsl-app ppp-mod-pppoa \
+	kmod-ltq-deu-ar9 kmod-usb-dwc2 -swconfig
+  SUPPORTED_DEVICES += FRITZ7320
+endef
+TARGET_DEVICES += avm_fritz7320
+
+define Device/zte_h201l
+  IMAGE_SIZE := 7808k
+  DEVICE_DTS := H201L
+  DEVICE_TITLE := ZTE H201L - H201L
+  DEVICE_PACKAGES := kmod-ath9k-htc wpad-mini \
+	kmod-ltq-adsl-ar9-mei kmod-ltq-adsl-ar9 \
+	kmod-ltq-adsl-ar9-fw-b kmod-ltq-atm-ar9 \
+	ltq-adsl-app ppp-mod-pppoe \
+	kmod-ltq-deu-ar9 kmod-usb-dwc2 kmod-usb-ledtrig-usbport \
+	kmod-ltq-tapi kmod-ltq-vmmc
+  SUPPORTED_DEVICES += H201L
+endef
+TARGET_DEVICES += zte_h201l
+
+define Device/zyxel_p-2601hn
+  IMAGE_SIZE := 15616k
+  DEVICE_DTS := P2601HNFX
+  DEVICE_TITLE := ZyXEL P-2601HN-Fx
+  DEVICE_PACKAGES := kmod-rt2800-usb wpad-mini \
+	kmod-ltq-adsl-ar9-mei kmod-ltq-adsl-ar9 \
+	kmod-ltq-adsl-ar9-fw-b kmod-ltq-atm-ar9 \
+	ltq-adsl-app ppp-mod-pppoe \
+	kmod-ltq-deu-ar9 kmod-usb-dwc2
+  SUPPORTED_DEVICES += P2601HNFX
+endef
+TARGET_DEVICES += zyxel_p-2601hn
+
 
 endif
 
 
-ifeq ($(CONFIG_TARGET_lantiq_xrx200),y)
+ifeq ($(SUBTARGET),xrx200)
 
 # VR9
-Image/BuildKernel/Profile/P2812HNUF1=$(call Image/BuildKernel/Template,P2812HNUF1)
-Image/Build/Profile/P2812HNUF1=$(call Image/BuildNAND/$(1),$(1),P2812HNUF1)
 
-Image/BuildKernel/Profile/P2812HNUF3=$(call Image/BuildKernel/Template,P2812HNUF3)
-Image/Build/Profile/P2812HNUF3=$(call Image/BuildNAND/$(1),$(1),P2812HNUF3)
-
-$(eval $(call lantiqImage,ARV7519RW22))
-
-Image/BuildKernel/Profile/BTHOMEHUBV5A=$(call Image/BuildKernel/Template,BTHOMEHUBV5A)
-Image/Build/Profile/BTHOMEHUBV5A=$(call Image/BuildNAND/$(1),$(1),BTHOMEHUBV5A)
-
-$(eval $(call lantiqImage,EASY80920NAND))
-$(eval $(call lantiqImage,EASY80920NOR))
-
-Image/BuildKernel/Profile/FRITZ3370=$(call Image/BuildKernelEVA/Template,FRITZ3370)
-Image/Build/Profile/FRITZ3370=$(call Image/BuildEVA/$(1),$(1),FRITZ3370)
-
-Image/BuildKernel/Profile/VG3503J=$(call Image/BuildKernelLoader/Template,VG3503J)
-Image/Build/Profile/VG3503J=$(call Image/BuildLoader/$(1),$(1),VG3503J)
-
-Image/BuildKernel/Profile/VG3503J_V2=$(call Image/BuildKernelLoader/Template,VG3503J_V2)
-Image/Build/Profile/VG3503J_V2=$(call Image/BuildLoader/$(1),$(1),VG3503J_V2)
-
-$(eval $(call lantiqTpLink,TDW8970,TD-W8970v1))
-$(eval $(call lantiqTpLink,TDW8980,TD-W8980v1))
-$(eval $(call lantiqTpLink,VR200v,ArcherVR200V))
-$(eval $(call lantiqImage,VGV7510KW22NOR))
-$(eval $(call lantiqBrnImage,VGV7510KW22BRN,BRNDA6431,0x12345678,0x04c11db7))
-$(eval $(call lantiqImage,VGV7519NOR))
-$(eval $(call lantiqBrnImage,VGV7519BRN,5D00008000,0x12345678,0x2083b8ed))
-
-define Image/Prepare
-	$(call Image/Prepare/Profile,$(PROFILE))
+define Device/zyxel_p-2812hnu-f1
+  $(Device/NAND)
+  BOARD_NAME := P2812HNUF1
+  DEVICE_DTS := P2812HNUF1
+  DEVICE_TITLE := ZyXEL P-2812HNU-F1
+  DEVICE_PACKAGES := kmod-rt2800-pci wpad-mini kmod-usb-dwc2 kmod-usb-ledtrig-usbport
+  SUPPORTED_DEVICES += P2812HNUF1
 endef
+TARGET_DEVICES += zyxel_p-2812hnu-f1
+
+define Device/zyxel_p-2812hnu-f3
+  $(Device/NAND)
+  BOARD_NAME := P2812HNUF3
+  DEVICE_DTS := P2812HNUF3
+  DEVICE_TITLE := ZyXEL P-2812HNU-F3
+  DEVICE_PACKAGES := kmod-rt2800-pci wpad-mini kmod-usb-dwc2
+  SUPPORTED_DEVICES += P2812HNUF3
+endef
+TARGET_DEVICES += zyxel_p-2812hnu-f3
+
+define Device/arcadyan_arv7519rw22
+  IMAGE_SIZE := 31232k
+  DEVICE_DTS := ARV7519RW22
+  DEVICE_TITLE := Livebox Astoria ARV7519RW22
+  DEVICE_PACKAGES := kmod-usb-dwc2
+  SUPPORTED_DEVICES += ARV7519RW22
+endef
+TARGET_DEVICES += arcadyan_arv7519rw22
+
+define Device/alphanetworks_asl56026
+  DEVICE_DTS := ASL56026
+  IMAGE_SIZE := 7488k
+  DEVICE_TITLE := BT OpenReach - ECI VDSL Modem V-2FUb/I
+endef
+TARGET_DEVICES += alphanetworks_asl56026
+
+define Device/bt_homehub-v5a
+  $(Device/NAND)
+  BOARD_NAME := BTHOMEHUBV5A
+  DEVICE_DTS := BTHOMEHUBV5A
+  DEVICE_TITLE := BT Home Hub 5A
+  DEVICE_PACKAGES := kmod-ath9k kmod-owl-loader \
+	kmod-ath10k ath10k-firmware-qca988x wpad-mini kmod-usb-dwc2
+  SUPPORTED_DEVICES += BTHOMEHUBV5A
+endef
+TARGET_DEVICES += bt_homehub-v5a
+
+define Device/netgear_dm200
+  DEVICE_DTS := DM200
+  IMAGES := sysupgrade.bin factory.img
+  IMAGE/factory.img := $$(IMAGE/sysupgrade.bin) | netgear-dni
+  IMAGE_SIZE := 7872k
+  DEVICE_TITLE := Netgear DM200
+  NETGEAR_BOARD_ID := DM200
+  NETGEAR_HW_ID := 29765233+8+0+64+0+0
+endef
+DEVICE_VARS += NETGEAR_BOARD_ID NETGEAR_HW_ID
+TARGET_DEVICES += netgear_dm200
+
+define Device/lantiq_easy80920-nand
+  $(Device/lantiqFullImage)
+  DEVICE_DTS := EASY80920NAND
+  IMAGE_SIZE := 64512k
+  DEVICE_TITLE := Lantiq VR9 - EASY80920NAND
+  DEVICE_PACKAGES := kmod-ath9k kmod-owl-loader wpad-mini kmod-usb-dwc2 kmod-usb-ledtrig-usbport
+endef
+TARGET_DEVICES += lantiq_easy80920-nand
+
+define Device/lantiq_easy80920-nor
+  DEVICE_DTS := EASY80920NOR
+  IMAGE_SIZE := 7936k
+  DEVICE_TITLE := Lantiq VR9 - EASY80920NOR
+  DEVICE_PACKAGES := kmod-ath9k kmod-owl-loader wpad-mini kmod-usb-dwc2 kmod-usb-ledtrig-usbport
+endef
+TARGET_DEVICES += lantiq_easy80920-nor
+
+define Device/avm_fritz3370
+  $(Device/AVM)
+  $(Device/NAND)
+  BOARD_NAME := FRITZ3370
+  DEVICE_DTS := FRITZ3370
+  DEVICE_TITLE := Fritz!Box WLan - FRITZ3370
+  DEVICE_PACKAGES := kmod-ath9k wpad-mini kmod-usb-dwc2
+  SUPPORTED_DEVICES += FRITZ3370
+endef
+TARGET_DEVICES += avm_fritz3370
+
+define Device/avm_fritz7360sl
+  $(Device/AVM)
+  IMAGE_SIZE := 15744k
+  DEVICE_DTS := FRITZ7360SL
+  DEVICE_TITLE := 1&1 HomeServer - FRITZ7360SL
+  DEVICE_PACKAGES := kmod-ath9k kmod-owl-loader wpad-mini kmod-usb-dwc2
+  SUPPORTED_DEVICES += FRITZ7360SL
+endef
+TARGET_DEVICES += avm_fritz7360sl
+
+define Device/arcadyan_vg3503j
+  IMAGE_SIZE := 8000k
+  DEVICE_DTS := VG3503J
+  DEVICE_TITLE := BT OpenReach - ECI VDSL Modem V-2FUb/R
+  SUPPORTED_DEVICES += VG3503J
+endef
+TARGET_DEVICES += arcadyan_vg3503j
+
+include tp-link.mk
+
+define Device/buffalo_wbmr-300hpd
+  IMAGE_SIZE := 15616k
+  DEVICE_DTS := WBMR300
+  DEVICE_TITLE := Buffalo WBMR-300HPD
+  DEVICE_PACKAGES := kmod-mt7603 wpad-mini kmod-usb-dwc2
+  SUPPORTED_DEVICES += WBMR300
+endef
+TARGET_DEVICES += buffalo_wbmr-300hpd
+
+define Device/arcadyan_vgv7510kw22-nor
+  IMAGE_SIZE := 15232k
+  DEVICE_DTS := VGV7510KW22NOR
+  DEVICE_TITLE := o2 Box 6431 / Arcadyan VGV7510KW22 (NOR)
+  DEVICE_PACKAGES := kmod-rt2800-pci wpad-mini kmod-usb-dwc2 kmod-ltq-tapi kmod-ltq-vmmc
+  SUPPORTED_DEVICES += VGV7510KW22NOR
+endef
+TARGET_DEVICES += arcadyan_vgv7510kw22-nor
+
+define Device/arcadyan_vgv7510kw22-brn
+  $(Device/lantiqBrnImage)
+  IMAGE_SIZE := 7168k
+  DEVICE_DTS := VGV7510KW22BRN
+  SIGNATURE := BRNDA6431
+  MAGIC := 0x12345678
+  CRC32_POLY := 0x04c11db7
+  DEVICE_TITLE := o2 Box 6431 / Arcadyan VGV7510KW22 (BRN)
+  DEVICE_PACKAGES := kmod-rt2800-pci wpad-mini kmod-usb-dwc2 kmod-ltq-tapi kmod-ltq-vmmc
+  SUPPORTED_DEVICES += VGV7510KW22BRN
+endef
+TARGET_DEVICES += arcadyan_vgv7510kw22-brn
+
+define Device/arcadyan_vgv7519-nor
+  IMAGE_SIZE := 15360k
+  DEVICE_DTS := VGV7519NOR
+  DEVICE_TITLE := Experiabox 8 VGV7519
+  DEVICE_PACKAGES := kmod-rt2800-pci wpad-mini kmod-usb-dwc2 kmod-ltq-tapi kmod-ltq-vmmc
+  SUPPORTED_DEVICES += VGV7519NOR
+endef
+TARGET_DEVICES += arcadyan_vgv7519-nor
+
+define Device/arcadyan_vgv7519-brn
+  $(Device/lantiqBrnImage)
+  IMAGE_SIZE := 7168k
+  DEVICE_DTS := VGV7519BRN
+  SIGNATURE := 5D00008000
+  MAGIC := 0x12345678
+  CRC32_POLY := 0x2083b8ed
+  DEVICE_TITLE := Experiabox 8 VGV7519 (BRN)
+  DEVICE_PACKAGES := kmod-rt2800-pci wpad-mini kmod-usb-dwc2 kmod-ltq-tapi kmod-ltq-vmmc
+  SUPPORTED_DEVICES += VGV7519BRN
+endef
+TARGET_DEVICES += arcadyan_vgv7519-brn
 
 endif
 
 
-define Image/BuildKernel
-	$(call Image/BuildKernel/Profile/$(PROFILE))
-endef
+ifeq ($(SUBTARGET),falcon)
 
-define Image/InstallKernel
-	$(call Image/InstallKernel/Template/$(PROFILE))
+define Device/lantiq_easy98000-nor
+  IMAGE_SIZE := 3904k
+  DEVICE_DTS := EASY98000NOR
+  DEVICE_TITLE := EASY98000 - Lantiq Falcon Eval Board NOR
+  DEVICE_PACKAGES := kmod-dm9000 kmod-i2c-lantiq kmod-eeprom-at24
 endef
+TARGET_DEVICES += lantiq_easy98000-nor
 
-define Image/Build
-	$(call Image/Build/Profile/$(PROFILE),$(1))
+define Device/lantiq_easy98000-nand
+  IMAGE_SIZE := 3904k
+  DEVICE_DTS := EASY98000NAND
+  DEVICE_TITLE := EASY98000 - Lantiq Falcon Eval Board NAND
+  DEVICE_PACKAGES := kmod-dm9000 kmod-i2c-lantiq kmod-eeprom-at24
 endef
+TARGET_DEVICES += lantiq_easy98000-nand
+
+define Device/lantiq_easy98000-sflash
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := EASY98000SFLASH
+  DEVICE_TITLE := EASY98000 - Lantiq Falcon Eval Board SFLASH
+  DEVICE_PACKAGES := kmod-dm9000 kmod-i2c-lantiq kmod-eeprom-at24
+endef
+TARGET_DEVICES += lantiq_easy98000-sflash
+
+define Device/lantiq_falcon-mdu
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := FALCON-MDU
+  DEVICE_TITLE := MDU - Lantiq Falcon / VINAXdp MDU Board
+endef
+TARGET_DEVICES += lantiq_falcon-mdu
+
+define Device/lantiq_easy88388
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := EASY88388
+  DEVICE_TITLE := EASY88388 - Lantiq Falcon FTTDP8 Reference Board
+endef
+TARGET_DEVICES += lantiq_easy88388
+
+define Device/lantiq_easy88444
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := EASY88444
+  DEVICE_TITLE := EASY88444 - Lantiq Falcon FTTdp G.FAST Reference Board
+endef
+TARGET_DEVICES += lantiq_easy88444
+
+define Device/lantiq_falcon-sfp
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := FALCON-SFP
+  DEVICE_TITLE := SFP - Lantiq Falcon SFP Stick
+endef
+TARGET_DEVICES += lantiq_falcon-sfp
+
+define Device/lantiq_easy98035synce
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := EASY98035SYNCE
+  DEVICE_TITLE := EASY98035SYNCE - Lantiq Falcon SFP Stick with Synchronous Ethernet
+endef
+TARGET_DEVICES += lantiq_easy98035synce
+
+define Device/lantiq_easy98035synce1588
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := EASY98035SYNCE1588
+  DEVICE_TITLE := EASY98035SYNCE1588 - Lantiq Falcon SFP Stick with SyncE and IEEE1588
+endef
+TARGET_DEVICES += lantiq_easy98035synce1588
+
+define Device/lantiq_easy98020
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := EASY98020
+  DEVICE_TITLE := EASY98020 - Lantiq Falcon SFU Reference Board
+endef
+TARGET_DEVICES += lantiq_easy98020
+
+define Device/lantiq_easy98020-v18
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := EASY98020V18
+  DEVICE_TITLE := EASY98020V18 - Lantiq Falcon SFU Reference Board V1.8
+endef
+TARGET_DEVICES += lantiq_easy98020-v18
+
+define Device/lantiq_easy98021
+  IMAGE_SIZE := 7424k
+  DEVICE_DTS := EASY98021
+  DEVICE_TITLE := EASY98021 - Lantiq Falcon HGU Reference Board
+endef
+TARGET_DEVICES += lantiq_easy98021
+
+endif
 
 $(eval $(call BuildImage))

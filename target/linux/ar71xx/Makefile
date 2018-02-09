@@ -9,11 +9,11 @@ include $(TOPDIR)/rules.mk
 ARCH:=mips
 BOARD:=ar71xx
 BOARDNAME:=Atheros AR7xxx/AR9xxx
-FEATURES:=mips16
-CPU_TYPE=34kc
-SUBTARGETS:=generic nand mikrotik
+FEATURES:=usbgadget
+CPU_TYPE:=24kc
+SUBTARGETS:=generic tiny nand mikrotik
 
-KERNEL_PATCHVER:=4.1
+KERNEL_PATCHVER:=4.9
 
 include $(INCLUDE_DIR)/target.mk
 

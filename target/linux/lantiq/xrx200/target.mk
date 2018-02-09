@@ -1,9 +1,8 @@
 ARCH:=mips
 SUBTARGET:=xrx200
 BOARDNAME:=XRX200
-FEATURES:=squashfs atm mips16 jffs2 nand ubifs
-CPU_TYPE:=34kc
-CPU_SUBTYPE:=dsp
+FEATURES:=squashfs atm nand
+CPU_TYPE:=24kc
 
 DEFAULT_PACKAGES+=kmod-leds-gpio \
 	kmod-gpio-button-hotplug \
@@ -13,6 +12,8 @@ DEFAULT_PACKAGES+=kmod-leds-gpio \
 	kmod-ltq-ptm-vr9 \
 	kmod-ltq-deu-vr9 \
 	ltq-vdsl-app \
+	dsl-vrx200-firmware-xdsl-a \
+	dsl-vrx200-firmware-xdsl-b-patch \
 	ppp-mod-pppoa \
 	swconfig
 

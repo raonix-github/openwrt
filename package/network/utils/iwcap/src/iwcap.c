@@ -1,7 +1,7 @@
 /*
  * iwcap.c - A simply radiotap capture utility outputting pcap dumps
  *
- *    Copyright 2012 Jo-Philipp Wich <jow@openwrt.org>
+ *    Copyright 2012 Jo-Philipp Wich <jo@mein.io>
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -490,19 +490,7 @@ int main(int argc, char **argv)
 	/* capture loop */
 	while (1)
 	{
-		if (run_stop)
-		{
-			msg("Shutting down ...\n");
-
-			if (promisc)
-				set_promisc(0);
-
-			if (ring)
-				ringbuf_free(ring);
-
-			return 0;
-		}
-		else if (run_dump)
+		if (run_dump)
 		{
 			msg("Dumping ring to %s ...\n", output);
 
@@ -534,6 +522,18 @@ int main(int argc, char **argv)
 			}
 
 			run_dump = 0;
+		}
+		if (run_stop)
+		{
+			msg("Shutting down ...\n");
+
+			if (promisc)
+				set_promisc(0);
+
+			if (ring)
+				ringbuf_free(ring);
+
+			return 0;
 		}
 
 		pktlen = recvfrom(capture_sock, pktbuf, sizeof(pktbuf), 0, NULL, 0);

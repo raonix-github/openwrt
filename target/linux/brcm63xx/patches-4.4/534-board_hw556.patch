@@ -5,10 +5,10 @@
  #include <linux/kernel.h>
  #include <linux/string.h>
 +#include <linux/pci_ids.h>
- #include <linux/platform_device.h>
- #include <linux/rtl8367.h>
  #include <asm/addrspace.h>
-@@ -1478,6 +1479,93 @@ static struct board_info __initdata boar
+ #include <bcm63xx_board.h>
+ #include <bcm63xx_cpu.h>
+@@ -1171,6 +1172,92 @@ static struct board_info __initdata boar
  	},
  };
  
@@ -16,7 +16,6 @@
 +	.name					= "HW556_C",
 +	.expected_cpu_id			= 0x6358,
 +
-+	.has_uart0				= 1,
 +	.has_pci				= 1,
 +	.has_ohci0				= 1,
 +	.has_ehci0				= 1,
@@ -44,7 +43,6 @@
 +	.name					= "HW556_A",
 +	.expected_cpu_id			= 0x6358,
 +
-+	.has_uart0				= 1,
 +	.has_pci				= 1,
 +	.has_ohci0				= 1,
 +	.has_ehci0				= 1,
@@ -58,6 +56,7 @@
 +			.slot			= 1,
 +			.endian_check		= 1,
 +			.led_pin		= 2,
++			.led_active_high	= 1,
 +		},
 +	},
 +
@@ -73,7 +72,6 @@
 +	.name					= "HW556_B",
 +	.expected_cpu_id			= 0x6358,
 +
-+	.has_uart0				= 1,
 +	.has_pci				= 1,
 +	.has_ohci0				= 1,
 +	.has_ehci0				= 1,
@@ -87,6 +85,7 @@
 +			.slot			= 1,
 +			.endian_check		= 1,
 +			.led_pin		= 2,
++			.led_active_high	= 1,
 +		},
 +	},
 +
@@ -102,7 +101,7 @@
   /* T-Home Speedport W 303V Typ B */
  static struct board_info __initdata board_spw303v = {
  	.name			= "96358-502V",
-@@ -1739,6 +1827,9 @@ static const struct board_info __initcon
+@@ -1391,6 +1478,9 @@ static const struct board_info __initcon
  	&board_nb4_fxc_r1,
  	&board_ct6373_1,
  	&board_HW553,
@@ -112,7 +111,7 @@
  	&board_spw303v,
  	&board_DVAG3810BN,
  #endif
-@@ -1811,6 +1902,9 @@ static struct of_device_id const bcm963x
+@@ -1463,6 +1553,9 @@ static struct of_device_id const bcm963x
  	{ .compatible = "d-link,dsl-2650u", .data = &board_96358vw2, },
  	{ .compatible = "d-link,dva-g3810bn/tl", .data = &board_DVAG3810BN, },
  	{ .compatible = "huawei,hg553", .data = &board_HW553, },

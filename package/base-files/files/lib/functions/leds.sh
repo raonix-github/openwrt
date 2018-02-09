@@ -1,6 +1,18 @@
 #!/bin/sh
 # Copyright (C) 2013 OpenWrt.org
 
+get_dt_led() {
+	local label
+	local ledpath
+	local basepath="/proc/device-tree"
+	local nodepath="$basepath/aliases/led-$1"
+
+	[ -f "$nodepath" ] && ledpath=$(cat "$nodepath")
+	[ -n "$ledpath" ] && label=$(cat "$basepath$ledpath/label")
+
+	echo "$label"
+}
+
 led_set_attr() {
 	[ -f "/sys/class/leds/$1/$2" ] && echo "$3" > "/sys/class/leds/$1/$2"
 }
@@ -21,12 +33,6 @@ led_off() {
 	led_set_attr $1 "brightness" 0
 }
 
-led_morse() {
-	led_set_attr $1 "trigger" "morse"
-	led_set_attr $1 "delay" "$2"
-	led_set_attr $1 "message" "$3"
-}
-
 status_led_set_timer() {
 	led_timer $status_led "$1" "$2"
 	[ -n "$status_led2" ] && led_timer $status_led2 "$1" "$2"
@@ -34,11 +40,6 @@ status_led_set_timer() {
 
 status_led_set_heartbeat() {
 	led_set_attr $status_led "trigger" "heartbeat"
-}
-
-status_led_set_morse() {
-	led_morse $status_led "$1" "$2"
-	[ -n "$status_led2" ] && led_morse $status_led2 "$1" "$2"
 }
 
 status_led_on() {

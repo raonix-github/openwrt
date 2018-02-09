@@ -9,11 +9,12 @@ include $(TOPDIR)/rules.mk
 BOARD:=malta
 BOARDNAME:=MIPS Malta CoreLV board (qemu)
 CPU_TYPE:=24kc
-SUBTARGETS:=le be #le64 be64
+SUBTARGETS:=le be le64 be64
 INITRAMFS_EXTRA_FILES:=
 MAINTAINER:=Florian Fainelli <florian@openwrt.org>
+FEATURES:=ramdisk
 
-KERNEL_PATCHVER:=4.4
+KERNEL_PATCHVER:=4.14
 
 include $(INCLUDE_DIR)/target.mk
 

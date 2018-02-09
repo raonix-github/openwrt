@@ -9,17 +9,16 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=samba
 PKG_VERSION:=3.6.25
-PKG_RELEASE:=5
+PKG_RELEASE:=9
 
-PKG_SOURCE_URL:=http://ftp.samba.org/pub/samba \
-	http://ftp.samba.org/pub/samba/stable
+PKG_SOURCE_URL:=https://download.samba.org/pub/samba \
+		https://download.samba.org/pub/samba/stable
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_MD5SUM:=76da2fa64edd94a0188531e7ecb27c4e
+PKG_HASH:=8f2c8a7f2bd89b0dfd228ed917815852f7c625b2bc0936304ac3ed63aaf83751
 
 PKG_LICENSE:=GPL-3.0
 PKG_LICENSE_FILES:=COPYING
-
-PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
+PKG_CPE_ID:=cpe:/a:samba:samba
 
 PKG_BUILD_PARALLEL:=1
 
@@ -30,19 +29,29 @@ CONFIGURE_PATH:=source3
 
 PKG_BUILD_BIN:=$(PKG_BUILD_DIR)/$(MAKE_PATH)/bin
 
-define Package/samba36-server
+define Package/samba/Default
   SECTION:=net
   CATEGORY:=Network
-  TITLE:=Samba 3.6 SMB/CIFS server
-  URL:=http://www.samba.org/
+  TITLE:=Samba 3.6 SMB/CIFS
+  URL:=https://www.samba.org/
+  MAINTAINER:=Felix Fietkau <nbd@nbd.name>
+endef
+
+define Package/samba36-server
+  $(call Package/samba/Default)
+  TITLE+= server
   DEPENDS:=+USE_GLIBC:librt $(ICONV_DEPENDS)
 endef
 
 define Package/samba36-client
-  SECTION:=net
-  CATEGORY:=Network
-  TITLE:=Samba 3.6 SMB/CIFS client
-  URL:=http://www.samba.org/
+  $(call Package/samba/Default)
+  TITLE+= client
+  DEPENDS:=+libreadline +libncurses
+endef
+
+define Package/samba36-net
+  $(call Package/samba/Default)
+  TITLE+= net commands
   DEPENDS:=+libreadline +libncurses
 endef
 
@@ -51,7 +60,6 @@ define Package/samba36-server/config
 		int "Maximum level of compiled-in debug messages"
 		depends on PACKAGE_samba36-server || PACKAGE_samba36-client
 		default -1
-
 endef
 
 define Package/samba36-server/description
@@ -82,6 +90,7 @@ CONFIGURE_VARS += \
 	samba_cv_USE_SETRESUID=yes \
 	samba_cv_have_setreuid=yes \
 	samba_cv_have_setresuid=yes \
+	ac_cv_header_libunwind_h=no \
 	ac_cv_header_zlib_h=no \
 	samba_cv_zlib_1_2_3=no \
 	ac_cv_path_PYTHON="" \
@@ -155,6 +164,12 @@ define Package/samba36-client/install
 	$(INSTALL_BIN) $(PKG_BUILD_BIN)/nmblookup $(1)/usr/sbin
 endef
 
+define Package/samba36-net/install
+	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_BIN) $(PKG_BUILD_BIN)/net $(1)/usr/sbin
+endef
+
 $(eval $(call BuildPackage,samba36-client))
 $(eval $(call BuildPackage,samba36-server))
+$(eval $(call BuildPackage,samba36-net))
 

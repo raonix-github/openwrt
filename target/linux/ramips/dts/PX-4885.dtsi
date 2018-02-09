@@ -1,29 +1,10 @@
 #include "rt5350.dtsi"
 
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
 / {
-	compatible = "PX-4885", "ralink,rt5350-soc";
-	model = "7Links PX-4885";
-
-	pinctrl {
-		state_default: pinctrl0 {
-			gpio {
-				ralink,group = "i2c", "jtag", "uartf";
-				ralink,function = "gpio";
-			};
-		};
-	};
-
-	ethernet@10100000 {
-		mtd-mac-address = <&factory 0x28>;
-	};
-
-	esw@10110000 {
-		mediatek,portmap = <0x3f>;
-	};
-
-	wmac@10180000 {
-		ralink,mtd-eeprom = <&factory 0>;
-	};
+	compatible = "7links,px-4885", "ralink,rt5350-soc";
 
 	gpio-keys-polled {
 		compatible = "gpio-keys-polled";
@@ -33,8 +14,8 @@
 
 		reset {
 			label = "reset";
-			gpios = <&gpio0 10 1>;
-			linux,code = <0x198>;
+			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
 		};
 	};
 
@@ -43,12 +24,33 @@
 
 		orange {
 			label = "px-4885:orange:wifi";
-			gpios = <&gpio0 18 1>;
+			gpios = <&gpio0 18 GPIO_ACTIVE_LOW>;
 		};
 
 		blue {
 			label = "px-4885:blue:storage";
-			gpios = <&gpio0 19 1>;
+			gpios = <&gpio0 19 GPIO_ACTIVE_LOW>;
 		};
 	};
+};
+
+&pinctrl {
+	state_default: pinctrl0 {
+		gpio {
+			ralink,group = "i2c", "jtag", "uartf";
+			ralink,function = "gpio";
+		};
+	};
+};
+
+&ethernet {
+	mtd-mac-address = <&factory 0x28>;
+};
+
+&esw {
+	mediatek,portmap = <0x3f>;
+};
+
+&wmac {
+	ralink,mtd-eeprom = <&factory 0>;
 };

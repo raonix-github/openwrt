@@ -2,8 +2,11 @@
 
 #include "rt5350.dtsi"
 
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
 / {
-	compatible = "HLKRM04", "ralink,rt5350-soc";
+	compatible = "hilink,hlk-rm04", "ralink,rt5350-soc";
 	model = "HILINK HLK-RM04";
 
 	memory@0 {
@@ -15,78 +18,6 @@
 		bootargs = "console=ttyS1,57600";
 	};
 
-	palmbus@10000000 {
-		uart@500 {
-			status = "okay";
-		};
-
-		spi@b00 {
-			status = "okay";
-
-			m25p80@0 {
-				#address-cells = <1>;
-				#size-cells = <1>;
-				compatible = "jedec,spi-nor";
-				reg = <0 0>;
-				linux,modalias = "m25p80", "s25fl064k";
-				spi-max-frequency = <10000000>;
-
-				partition@0 {
-					label = "u-boot";
-					reg = <0x0 0x30000>;
-					read-only;
-				};
-
-				partition@30000 {
-					label = "u-boot-env";
-					reg = <0x30000 0x10000>;
-					read-only;
-				};
-
-				factory: partition@40000 {
-					label = "factory";
-					reg = <0x40000 0x10000>;
-					read-only;
-				};
-
-				partition@50000 {
-					label = "firmware";
-					reg = <0x50000 0x3b0000>;
-				};
-			};
-		};
-	};
-
-	pinctrl {
-		state_default: pinctrl0 {
-			gpio {
-				ralink,group = "i2c", "jtag";
-				ralink,function = "gpio";
-			};
-
-			uartf_gpio {
-				ralink,group = "uartf";
-				ralink,function = "gpio uartf";
-			};
-		};
-	};
-
-	ethernet@10100000 {
-		mtd-mac-address = <&factory 0x4>;
-	};
-
-	wmac@10180000 {
-		ralink,mtd-eeprom = <&factory 0>;
-	};
-
-	ehci@101c0000 {
-		status = "okay";
-	};
-
-	ohci@101c1000 {
-		status = "okay";
-	};
-
 	gpio-export {
 		compatible = "gpio-export";
 		#size-cells = <0>;
@@ -96,13 +27,13 @@
 			/* I2C_I2C_SD */
 			gpio-export,name = "hlk-rm04:gpio0";
 			gpio-export,direction_may_change = <1>;
-			gpios = <&gpio0 1 0>;
+			gpios = <&gpio0 1 GPIO_ACTIVE_HIGH>;
 		};
 		gpio2 {
 			/* I2C_I2C_SCLK */
 			gpio-export,name = "hlk-rm04:gpio1";
 			gpio-export,direction_may_change = <1>;
-			gpios = <&gpio0 2 0>;
+			gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
 		};
 	};
 
@@ -113,13 +44,82 @@
 		poll-interval = <20>;
 		reset {
 			label = "reset";
-			gpios = <&gpio0 0 1>;
-			linux,code = <0x198>;
+			gpios = <&gpio0 0 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
 		};
 		wps {
 			label = "wps";
-			gpios = <&gpio0 14 1>;
-			linux,code = <0x211>;
+			gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WPS_BUTTON>;
 		};
 	};
+};
+
+&uart {
+	status = "okay";
+};
+
+&spi0 {
+	status = "okay";
+
+	m25p80@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+
+		partition@0 {
+			label = "u-boot";
+			reg = <0x0 0x30000>;
+			read-only;
+		};
+
+		partition@30000 {
+			label = "u-boot-env";
+			reg = <0x30000 0x10000>;
+			read-only;
+		};
+
+		factory: partition@40000 {
+			label = "factory";
+			reg = <0x40000 0x10000>;
+			read-only;
+		};
+
+		partition@50000 {
+			label = "firmware";
+			reg = <0x50000 0x3b0000>;
+		};
+	};
+};
+
+&pinctrl {
+	state_default: pinctrl0 {
+		gpio {
+			ralink,group = "i2c", "jtag";
+			ralink,function = "gpio";
+		};
+
+		uartf_gpio {
+			ralink,group = "uartf";
+			ralink,function = "gpio uartf";
+		};
+	};
+};
+
+&ethernet {
+	mtd-mac-address = <&factory 0x4>;
+};
+
+&wmac {
+	ralink,mtd-eeprom = <&factory 0>;
+};
+
+&ehci {
+	status = "okay";
+};
+
+&ohci {
+	status = "okay";
 };

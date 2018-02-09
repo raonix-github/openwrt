@@ -8,15 +8,18 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=rbcfg
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
+
+PKG_FLAGS:=nonshared
 
 include $(INCLUDE_DIR)/package.mk
 
 define Package/rbcfg
   SECTION:=utils
   CATEGORY:=Utilities
+  SUBMENU:=Boot Loaders
   TITLE:=RouterBOOT configuration tool
   DEPENDS:=@TARGET_ar71xx
 endef
@@ -24,11 +27,6 @@ endef
 define Package/rbcfg/description
  This package contains an utility to manipulate RouterBOOT configuration on the
  MikroTIK RB-4XX devices.
-endef
-
-define Build/Prepare
-	mkdir -p $(PKG_BUILD_DIR)
-	$(CP) ./src/* $(PKG_BUILD_DIR)/
 endef
 
 define Build/Configure

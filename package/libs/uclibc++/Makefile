@@ -1,5 +1,6 @@
 #
 # Copyright (C) 2006-2012 OpenWrt.org
+# Copyright (c) 2016 LEDE project
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -9,11 +10,11 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=uclibc++
 PKG_VERSION:=0.2.4
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE:=uClibc++-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=http://cxx.uclibc.org/src/
-PKG_MD5SUM:=394c119363dd8b469fb898442a6764b8
+PKG_HASH:=be16fc6a6eb2e59df420ee41e7042f38e27ebaf5c2762d90e75803364a7b00db
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/uClibc++-$(PKG_VERSION)
 PKG_BUILD_PARALLEL:=1
@@ -62,9 +63,16 @@ MAKE_FLAGS:= \
 	LDFLAGS="-Wl,--warn-common -Wl,--warn-once -Wl,-z,combreloc -Wl,-z,defs $(TARGET_LDFLAGS)" \
 	CP="$(CP)" \
 	GEN_LIBS="-lc $(LIBGCC_S) $(SSP_LIB)" \
+	GEN_CFLAGS="-std=gnu++98 -nostdinc++" \
 	check_as_needed=
 
 # check_as_needed overrides dependency on libgcc_s
+
+define Build/Prepare
+	$(PKG_UNPACK)
+	$(SED) 's/\r$$$$//' $(PKG_BUILD_DIR)/include/unwind-cxx.h
+	$(Build/Patch)
+endef
 
 define Build/Configure
 	if [ -f ./files/config.$(UCLIBC_TARGET_ARCH) ]; then \

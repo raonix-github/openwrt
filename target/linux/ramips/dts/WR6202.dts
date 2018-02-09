@@ -2,21 +2,15 @@
 
 #include "rt3050.dtsi"
 
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
 / {
-	compatible = "WR6202", "ralink,rt3052-soc";
+	compatible = "accton,wr6202", "ralink,rt3052-soc";
 	model = "AWB WR6202";
 
 	chosen {
 		bootargs = "console=ttyS0,115200";
-	};
-
-	pinctrl {
-		state_default: pinctrl0 {
-			gpio {
-				ralink,group = "spi", "i2c", "jtag", "rgmii", "mdio", "uartf";
-				ralink,function = "gpio";
-			};
-		};
 	};
 
 	gpio-leds {
@@ -24,12 +18,12 @@
 
 		wps {
 			label = "wr6202:blue:wps";
-			gpios = <&gpio0 14 1>;
+			gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
 		};
 
 		3g {
 			label = "wr6202:blue:3g";
-			gpios = <&gpio0 13 1>;
+			gpios = <&gpio0 13 GPIO_ACTIVE_LOW>;
 		};
 	};
 
@@ -41,14 +35,14 @@
 
 		reset {
 			label = "reset";
-			gpios = <&gpio0 10 1>;
-			linux,code = <0x198>;
+			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
 		};
 
 		wps {
 			label = "wps";
-			gpios = <&gpio0 0 1>;
-			linux,code = <0x211>;
+			gpios = <&gpio0 0 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WPS_BUTTON>;
 		};
 	};
 
@@ -84,22 +78,6 @@
 		};
 	};
 
-	ethernet@10100000 {
-		mtd-mac-address = <&factory 0x28>;
-	};
-
-	esw@10110000 {
-		mediatek,portmap = <0x3e>;
-	};
-
-	wmac@10180000 {
-		ralink,mtd-eeprom = <&factory 0>;
-	};
-
-	otg@101c0000 {
-		status = "okay";
-	};
-
 	gpio_export {
 		compatible = "gpio-export";
 		#size-cells = <0>;
@@ -107,7 +85,32 @@
 		usb {
 			gpio-export,name = "usb";
 			gpio-export,output = <0>;
-			gpios = <&gpio0 11 0>;
+			gpios = <&gpio0 11 GPIO_ACTIVE_LOW>;
 		};
 	};
+};
+
+&pinctrl {
+	state_default: pinctrl0 {
+		gpio {
+			ralink,group = "spi", "i2c", "jtag", "rgmii", "mdio", "uartf";
+			ralink,function = "gpio";
+		};
+	};
+};
+
+&ethernet {
+	mtd-mac-address = <&factory 0x28>;
+};
+
+&esw {
+	mediatek,portmap = <0x3e>;
+};
+
+&wmac {
+	ralink,mtd-eeprom = <&factory 0>;
+};
+
+&otg {
+	status = "okay";
 };

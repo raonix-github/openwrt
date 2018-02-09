@@ -2,18 +2,12 @@
 
 #include "rt3050.dtsi"
 
-/ {
-	compatible = "DIR-600-B1", "ralink,rt3050-soc";
-	model = "D-Link DIR-600 B1";
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
 
-	pinctrl {
-		state_default: pinctrl0 {
-			gpio {
-				ralink,group = "i2c", "spi", "jtag", "mdio", "rgmii", "uartf";
-				ralink,function = "gpio";
-			};
-		};
-	};
+/ {
+	compatible = "dlink,dir-600-b1", "ralink,rt3050-soc";
+	model = "D-Link DIR-600 B1";
 
 	cfi@1f000000 {
 		compatible = "cfi-flash";
@@ -47,18 +41,6 @@
 		};
 	};
 
-	ethernet@10100000 {
-		mtd-mac-address = <&devdata 0x4004>;
-	};
-
-	esw@10110000 {
-		mediatek,portmap = <0x2f>;
-	};
-
-	wmac@10180000 {
-		ralink,mtd-eeprom = <&devdata 0x4000>;
-	};
-
 	gpio-keys-polled {
 		compatible = "gpio-keys-polled";
 		#address-cells = <1>;
@@ -67,14 +49,14 @@
 
 		reset {
 			label = "reset";
-			gpios = <&gpio0 10 1>;
-			linux,code = <0x198>;
+			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
 		};
 
 		wps {
 			label = "wps";
-			gpios = <&gpio0 0 1>;
-			linux,code = <0x211>;
+			gpios = <&gpio0 0 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WPS_BUTTON>;
 		};
 	};
 
@@ -83,27 +65,48 @@
 
 		status {
 			label = "dir-600-b1:amber:status";
-			gpios = <&gpio0 8 1>;
+			gpios = <&gpio0 8 GPIO_ACTIVE_LOW>;
 		};
 
 		status2 {
 			label = "dir-600-b1:green:status";
-			gpios = <&gpio0 9 1>;
+			gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
 		};
 
 		wan {
 			label = "dir-600-b1:amber:wan";
-			gpios = <&gpio0 14 1>;
+			gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
 		};
 
 		wan2 {
 			label = "dir-600-b1:green:wan";
-			gpios = <&gpio0 12 1>;
+			gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
 		};
 
 		wps {
 			label = "dir-600-b1:blue:wps";
-			gpios = <&gpio0 13 1>;
+			gpios = <&gpio0 13 GPIO_ACTIVE_LOW>;
 		};
 	};
+};
+
+&pinctrl {
+	state_default: pinctrl0 {
+		gpio {
+			ralink,group = "i2c", "spi", "jtag", "mdio", "rgmii", "uartf";
+			ralink,function = "gpio";
+		};
+	};
+};
+
+&ethernet {
+	mtd-mac-address = <&devdata 0x4004>;
+};
+
+&esw {
+	mediatek,portmap = <0x2f>;
+};
+
+&wmac {
+	ralink,mtd-eeprom = <&devdata 0x4000>;
 };

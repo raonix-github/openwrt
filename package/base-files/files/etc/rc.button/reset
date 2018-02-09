@@ -2,25 +2,28 @@
 
 . /lib/functions.sh
 
+OVERLAY="$( grep ' /overlay ' /proc/mounts )"
+
 case "$ACTION" in
 pressed)
+	[ -z "$OVERLAY" ] && return 0
+
 	return 5
 ;;
 timeout)
 	. /etc/diag.sh
 	set_state failsafe
-	echo "RESET TIMEOUT" > /dev/console
 ;;
 released)
 	if [ "$SEEN" -lt 1 ]
 	then
 		echo "REBOOT" > /dev/console
 		sync
-#		reboot
-	elif [ "$SEEN" -gt 5 ]
+		reboot
+	elif [ "$SEEN" -gt 5 -a -n "$OVERLAY" ]
 	then
 		echo "FACTORY RESET" > /dev/console
-#		jffs2reset -y && reboot &
+		jffs2reset -y && reboot &
 	fi
 ;;
 esac

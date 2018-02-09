@@ -4,39 +4,37 @@
 #
 
 . /lib/functions/uci-defaults.sh
-. /lib/kirkwood.sh
+. /lib/functions/system.sh
 
 board_config_update
 
-board=$(kirkwood_board_name)
+board=$(board_name)
 
 case "$board" in
-"dockstar"|\
-"goflexhome"|\
-"goflexnet"|\
-"iconnect"|\
-"ib62x0"|\
-"nsa310s"|\
-"pogo_e02")
+"cisco,on100")
+	ucidef_set_interface_lan "eth0 eth1"
+	;;
+"cloudengines,pogoe02"|\
+"cloudengines,pogoplugv4"|\
+"iom,iconnect-1.1"|\
+"raidsonic,ib-nas62x0"|\
+"seagate,dockstar"|\
+"seagate,goflexhome"|\
+"seagate,goflexnet")
 	ucidef_set_interface_lan "eth0" "dhcp"
 	;;
-"linksys-audi")
+"linksys,audi"|\
+"linksys,viper")
 	ucidef_add_switch "switch0" \
 		"0:lan" "1:lan" "2:lan" "3:lan" "4:wan" "5@eth0" "6@eth1"
 	;;
-"linksys-viper")
-	ucidef_add_switch "switch0" \
-		"0:lan" "1:lan" "2:lan" "3:lan" "4:wan" "5@eth0" "6@eth1"
-	;;
-"guruplug-server-plus")
-	ucidef_set_interface_lan "eth0 eth1" "dhcp"
-	;;
-"sheevaplug" | \
-"sheevaplug-esata")
+"zyxel,nsa310b"|\
+"zyxel,nsa325")
 	ucidef_set_interface_lan "eth0" "dhcp"
+	ucidef_set_interface_macaddr "lan" $( mtd_get_mac_ascii uboot_env ethaddr )
 	;;
 *)
-	ucidef_set_interface_lan "eth0" "static"
+	ucidef_set_interface_lan "eth0"
 	;;
 esac
 

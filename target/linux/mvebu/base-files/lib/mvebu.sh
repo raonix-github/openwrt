@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # Copyright (C) 2013-2015 OpenWrt.org
+# Copyright (C) 2016 LEDE-Project.org
 #
 
 MVEBU_BOARD_NAME=
@@ -43,14 +44,20 @@ mvebu_board_detect() {
 	*"Linksys WRT1900ACS")
 		name="armada-385-linksys-shelby"
 		;;
+	*"Linksys WRT3200ACM")
+		name="armada-385-linksys-rango"
+		;;
 	*"Marvell Armada 385 Access Point Development Board")
 		name="armada-385-db-ap"
 		;;
 	*"Marvell Armada XP Development Board DB-MV784MP-GP")
 		name="armada-xp-gp"
 		;;
-	*"SolidRun Clearfog A1")
-		name="armada-388-clearfog"
+	*"SolidRun Clearfog Pro A1")
+		name="armada-388-clearfog-pro"
+		;;
+	*"SolidRun Clearfog Base A1")
+		name="armada-388-clearfog-base"
 		;;
 	esac
 
@@ -63,14 +70,4 @@ mvebu_board_detect() {
 
 	echo "$MVEBU_BOARD_NAME" > /tmp/sysinfo/board_name
 	echo "$MVEBU_MODEL" > /tmp/sysinfo/model
-}
-
-mvebu_board_name() {
-	local name
-
-	[ -f /tmp/sysinfo/board_name ] || mvebu_board_detect
-	[ -f /tmp/sysinfo/board_name ] && name=$(cat /tmp/sysinfo/board_name)
-	[ -z "$name" ] && name="unknown"
-
-	echo "$name"
 }
