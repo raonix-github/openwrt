@@ -61,6 +61,7 @@ platform_check_image() {
 	fonera20n|\
 	freestation5|\
 	gb-pc1|\
+	gb-pc2|\
 	gl-mt300a|\
 	gl-mt300n|\
 	gl-mt750|\
@@ -244,6 +245,7 @@ platform_check_image() {
 	mr200|\
 	tplink,c20-v1|\
 	tplink,c20-v4|\
+	tplink,c50-v3|\
 	tplink,tl-mr3420-v5|\
 	tl-wr840n-v4|\
 	tl-wr840n-v5|\

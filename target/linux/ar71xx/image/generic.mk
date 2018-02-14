@@ -203,6 +203,15 @@ define Device/cf-e355ac
 endef
 TARGET_DEVICES += cf-e355ac
 
+define Device/cf-e375ac
+  DEVICE_TITLE := COMFAST CF-E375AC
+  DEVICE_PACKAGES := kmod-ath10k ath10k-firmware-qca9888
+  BOARDNAME := CF-E375AC
+  IMAGE_SIZE := 16000k
+  MTDPARTS := spi0.0:256k(u-boot)ro,64k(art)ro,16000k(firmware),64k(art-backup)ro
+endef
+TARGET_DEVICES += cf-e375ac
+
 define Device/cf-e380ac-v1
   DEVICE_TITLE := COMFAST CF-E380AC v1
   DEVICE_PACKAGES := kmod-usb-core kmod-usb2 kmod-ath10k ath10k-firmware-qca988x
@@ -300,6 +309,19 @@ define Device/ew-dorin-router
   MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env),16000k(firmware),64k(art)ro
 endef
 TARGET_DEVICES += ew-dorin-router
+
+define Device/rme-eg200
+  DEVICE_TITLE := eTactica EG-200
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 kmod-ledtrig-oneshot \
+	kmod-usb-serial kmod-usb-serial-ftdi \
+	kmod-usb-storage \
+	kmod-fs-ext4
+  BOARDNAME = RME-EG200
+  IMAGE_SIZE = 16000k
+  CONSOLE = ttyATH0,115200
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,16000k(firmware),64k(art)ro
+endef
+TARGET_DEVICES += rme-eg200
 
 define Device/weio
   DEVICE_TITLE := WeIO
