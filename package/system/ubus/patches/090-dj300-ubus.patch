@@ -1,0 +1,84 @@
+--- a/cli.c
++++ b/cli.c
+@@ -154,6 +154,59 @@ static int ubus_cli_call(struct ubus_con
+ 	return ubus_invoke(ctx, id, argv[1], b.head, receive_call_result_data, NULL, timeout * 1000);
+ }
+ 
++// bygomma : start
++static const struct blobmsg_policy payload_policy = {
++	"payload", BLOBMSG_TYPE_STRING
++};
++static void receive_ubusipc_result_data(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	struct blob_attr *tb;
++	char *payload = NULL;
++	if (!msg)
++		return;
++
++	blobmsg_parse(&payload_policy, 1, &tb, blob_data(msg), blob_len(msg));
++	if (tb) {
++		payload = blobmsg_get_string(tb);
++	}
++
++	if (payload)
++		printf("%s\n", payload);
++}
++static int ubus_cli_ubusipc(struct ubus_context *ctx, int argc, char **argv)
++{
++	uint32_t id;
++	int ret;
++
++	if (argc < 2 || argc > 3)
++		return -2;
++
++	blob_buf_init(&b, 0);
++
++	printf ("argv[2] : %s\n", argv[2]);
++
++	ret = blobmsg_add_string(&b, "payload", argv[2]);
++
++	fprintf(stderr, "ubus_strerror : %s\n", ubus_strerror(ret));
++
++	printf ("reg : %d\n", ret);
++
++	/*
++	if (argc == 3 && !blobmsg_add_string(&b, "payload", argv[2])) {
++		if (!simple_output)
++			fprintf(stderr, "Failed to parse message data\n");
++		return -1;
++	}
++	*/
++
++	ret = ubus_lookup_id(ctx, argv[0], &id);
++	if (ret)
++		return ret;
++
++	return ubus_invoke(ctx, id, argv[1], b.head, receive_ubusipc_result_data, NULL, timeout * 1000);
++}
++// bygomma : end
++
+ struct cli_listen_data {
+ 	struct uloop_timeout timeout;
+ 	bool timed_out;
+@@ -569,6 +622,9 @@ static struct {
+ 	{ "send", ubus_cli_send },
+ 	{ "wait_for", ubus_cli_wait_for },
+ 	{ "monitor", ubus_cli_monitor },
++	// bygomma : start
++	{ "ubusipc", ubus_cli_ubusipc },
++	// bygomma : end
+ };
+ 
+ int main(int argc, char **argv)
+--- a/libubus.h
++++ b/libubus.h
+@@ -132,6 +132,9 @@ struct ubus_object {
+ 
+ 	const struct ubus_method *methods;
+ 	int n_methods;
++	// bygomma : start
++	void *userdata;
++	// bygomma : end
+ };
+ 
+ struct ubus_subscriber {
