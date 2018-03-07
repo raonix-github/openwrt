@@ -1,0 +1,18 @@
+--- a/drivers/gpio/gpio-pcf857x.c
++++ b/drivers/gpio/gpio-pcf857x.c
+@@ -36,6 +36,7 @@ static const struct i2c_device_id pcf857
+ 	{ "pcf8574", 8 },
+ 	{ "pcf8574a", 8 },
+ 	{ "pca8574", 8 },
++	{ "pca9500", 8 },   // bygomma : PCA9500
+ 	{ "pca9670", 8 },
+ 	{ "pca9672", 8 },
+ 	{ "pca9674", 8 },
+@@ -56,6 +57,7 @@ static const struct of_device_id pcf857x
+ 	{ .compatible = "nxp,pcf8574" },
+ 	{ .compatible = "nxp,pcf8574a" },
+ 	{ .compatible = "nxp,pca8574" },
++	{ .compatible = "nxp,pca9500" }, // bygomma : PCA9500
+ 	{ .compatible = "nxp,pca9670" },
+ 	{ .compatible = "nxp,pca9672" },
+ 	{ .compatible = "nxp,pca9674" },
