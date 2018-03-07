@@ -325,6 +325,9 @@ get_status_led() {
 	zbt-wg3526-32M)
 		status_led="zbt-wg3526:green:status"
 		;;
+	r9-dj300)
+		status_led="$boardname:run"
+		;;
 	esac
 }
 

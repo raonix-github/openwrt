@@ -2,6 +2,16 @@
 # MT76x8 Profiles
 #
 
+# R9-DJ300
+define Device/r9-dj300
+  DTS := R9-DJ300
+  IMAGE_SIZE := $(ralink_default_fw_size_32M)
+  SUPPORTED_DEVICES := r9-dj300
+  DEVICE_TITLE := RAONIX Iot Hub DJ300
+  DEVICE_PACKAGES:= kmod-usb2 kmod-usb-ohci uboot-envtools
+endef
+TARGET_DEVICES += r9-dj300
+
 define Device/tplink
   TPLINK_FLASHLAYOUT :=
   TPLINK_HWID :=
@@ -17,7 +27,6 @@ define Device/tplink
 	check-size $$$$(IMAGE_SIZE)
 endef
 DEVICE_VARS += TPLINK_FLASHLAYOUT TPLINK_HWID TPLINK_HWREV TPLINK_HWREVADD TPLINK_HVERSION
-
 
 define Device/duzun-dm06
   DTS := DUZUN-DM06

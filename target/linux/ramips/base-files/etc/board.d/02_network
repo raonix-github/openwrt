@@ -30,6 +30,10 @@ ramips_setup_interfaces()
 {
 	local board="$1"
 
+	echo "================================="
+	echo $board
+
+
 	case $board in
 	11acnas|\
 	w2914nsv2|\
@@ -48,7 +52,8 @@ ramips_setup_interfaces()
 	dcs-930|\
 	dcs-930l-b1|\
 	ht-tm02|\
-	linkits7688 | \
+	linkits7688|\
+	r9-dj300|\
 	m2m|\
 	microwrt|\
 	mpr-a2|\
@@ -444,6 +449,10 @@ ramips_setup_macs()
 		wan_mac=$(mtd_get_mac_binary factory 40)
 		;;
 	linkits7688)
+		wan_mac=$(mtd_get_mac_binary factory 4)
+		lan_mac=$(mtd_get_mac_binary factory 46)
+		;;
+	r9-dj300)
 		wan_mac=$(mtd_get_mac_binary factory 4)
 		lan_mac=$(mtd_get_mac_binary factory 46)
 		;;
