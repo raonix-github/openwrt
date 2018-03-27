@@ -53,6 +53,7 @@ ramips_setup_interfaces()
 	dcs-930l-b1|\
 	ht-tm02|\
 	linkits7688|\
+	r9-dj270|\
 	r9-dj300|\
 	m2m|\
 	microwrt|\
@@ -449,6 +450,10 @@ ramips_setup_macs()
 		wan_mac=$(mtd_get_mac_binary factory 40)
 		;;
 	linkits7688)
+		wan_mac=$(mtd_get_mac_binary factory 4)
+		lan_mac=$(mtd_get_mac_binary factory 46)
+		;;
+	r9-dj270)
 		wan_mac=$(mtd_get_mac_binary factory 4)
 		lan_mac=$(mtd_get_mac_binary factory 46)
 		;;

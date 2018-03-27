@@ -12,6 +12,16 @@ define Device/r9-dj300
 endef
 TARGET_DEVICES += r9-dj300
 
+# R9-DJ270
+define Device/r9-dj270
+  DTS := R9-DJ270
+  IMAGE_SIZE := $(ralink_default_fw_size_32M)
+  SUPPORTED_DEVICES := r9-dj270
+  DEVICE_TITLE := RAONIX Iot Hub DJ270
+  DEVICE_PACKAGES:= uboot-envtools
+endef
+TARGET_DEVICES += r9-dj270
+
 define Device/tplink
   TPLINK_FLASHLAYOUT :=
   TPLINK_HWID :=
