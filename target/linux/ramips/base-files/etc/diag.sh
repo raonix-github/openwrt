@@ -327,7 +327,10 @@ get_status_led() {
 		;;
 	r9-dj270|\
 	r9-dj300)
-		status_led="$boardname:run"
+		status_led="$boardname:green:run"
+		;;
+	r9-dj310)
+		status_led="$boardname:green:run"
 		;;
 	esac
 }

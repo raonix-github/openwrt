@@ -1,0 +1,23 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2015 raonix.com
+ 
+START=70
+STOP=70
+ 
+start() {        
+	echo "start DSGNG"
+	# commands to launch application
+	# /bin/DsgngBluetooth 2>/dev/null &
+	/bin/DsgngBluetooth &
+	sleep 1;
+	# /bin/DsgngPlatform 2>/dev/null &
+	/bin/DsgngPlatform &
+}                 
+
+stop() {          
+	echo "stop DSGNG"
+	# commands to kill application 
+
+	killall -9 DsgngPlatform
+	killall -9 DsgngBluetooth
+}

@@ -430,6 +430,9 @@ ramips_board_detect() {
 	*"RAONIX Iot Hub DJ300")
 		name="r9-dj300"
 		;;
+	*"RAONIX Iot Hub DJ310")
+		name="r9-dj310"
+		;;
 	*"RB750Gr3")
 		name="rb750gr3"
 		;;

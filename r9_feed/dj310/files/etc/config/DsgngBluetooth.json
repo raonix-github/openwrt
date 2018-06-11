@@ -1,0 +1,19 @@
+{
+  "shadowdevice": [
+    {
+      "name": "shadow.dsgng.dsgng-controller.1",
+      "networkType": "DSGNGBT",
+      "id": [1,2,3,4,5],
+      "deviceId": 54,
+      "groupId": 1,
+      "type": "dsgng-controller"
+    }, {
+      "name": "shadow.dsgng.dsgng-motionsensor.1",
+      "networkType": "DSGNGBT",
+      "id": [1,2,3,4,5],
+      "deviceId": 64,
+      "groupId": 1,
+      "type": "dsgng-motionsensor"
+    }
+  ]
+}

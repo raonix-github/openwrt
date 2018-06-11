@@ -53,8 +53,6 @@ ramips_setup_interfaces()
 	dcs-930l-b1|\
 	ht-tm02|\
 	linkits7688|\
-	r9-dj270|\
-	r9-dj300|\
 	m2m|\
 	microwrt|\
 	mpr-a2|\
@@ -71,6 +69,13 @@ ramips_setup_interfaces()
 		ucidef_add_switch "switch0"
 		ucidef_add_switch_attr "switch0" "enable" "false"
 		ucidef_set_interface_lan "eth0"
+		;;
+	r9-dj270|\
+	r9-dj300|\
+	r9-dj310)
+		ucidef_add_switch "switch0"
+		ucidef_add_switch_attr "switch0" "enable" "false"
+		ucidef_set_interface_lan "eth0" "dhcp"
 		;;
 	mlw221|\
 	mr-102n)
@@ -458,6 +463,10 @@ ramips_setup_macs()
 		lan_mac=$(mtd_get_mac_binary factory 46)
 		;;
 	r9-dj300)
+		wan_mac=$(mtd_get_mac_binary factory 4)
+		lan_mac=$(mtd_get_mac_binary factory 46)
+		;;
+	r9-dj310)
 		wan_mac=$(mtd_get_mac_binary factory 4)
 		lan_mac=$(mtd_get_mac_binary factory 46)
 		;;

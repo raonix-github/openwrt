@@ -256,7 +256,15 @@ r9-dj270)
 	ucidef_set_led_wlan "wifi" "wifi" "$boardname:wifi" "phy0tpt"
 	;;
 r9-dj300)
-	ucidef_set_led_wlan "wifi" "wifi" "$boardname:wifi" "phy0tpt"
+	ucidef_set_led_wlan "wifi" "wifi" "$boardname:orange:wifi" "phy0tpt"
+	ucidef_set_led_netdev "eth" "ethernet" "$boardname:green:network" "eth0"
+	;;
+r9-dj310)
+	ucidef_set_led_wlan "wifi" "wifi" "$boardname:orange:wifi" "phy0tpt"
+	ucidef_set_led_netdev "eth" "ethernet" "$boardname:green:network" "eth0"
+	ucidef_set_led_default "run" "run" "$boardname:green:run" "1"
+	ucidef_set_led_default "iot" "iot" "$boardname:green:iot" "1"
+	ucidef_set_led_default "xmpp" "xmpp" "$boardname:red:iot" "1"
 	;;
 m2m)
 	set_wifi_led "$boardname:blue:wifi"

@@ -126,6 +126,7 @@ platform_check_image() {
 	px-4885-8M|\
 	r9-dj270|\
 	r9-dj300|\
+	r9-dj310|\
 	rb750gr3|\
 	re6500|\
 	rp-n53|\

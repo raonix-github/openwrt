@@ -1,0 +1,37 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+json_init
+json_add_string event "button"
+json_add_object "message"
+json_add_string "button" "friend"
+json_add_string "action" "$ACTION"
+json_add_int "seen" "$SEEN"
+json_add_int "seqnum" "$SEQNUM"
+json_close_object
+
+echo "$(json_dump)" > /dev/console
+
+ubus send ubusipc.event "$(json_dump)"
+
+case "$ACTION" in
+pressed)
+	return 0
+;;
+timeout)
+	/bin/dj310_led.sh -us
+;;
+released)
+	if [ "$SEEN" -gt 5 ]
+	then
+		echo "UPGRADE" > /dev/console
+		result=$(dj310_upgrade.sh)
+	fi
+;;
+esac
+
+
+
+return 0

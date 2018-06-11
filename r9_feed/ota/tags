@@ -1,0 +1,61 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+BC_MTD_WRITE_PROGRESS	src/ota.c	34;"	d	file:
+BC_MTD_WRITE_STATE	src/ota.c	35;"	d	file:
+BC_OTA_PROGRESS	src/ota.c	37;"	d	file:
+BC_OTA_STATE	src/ota.c	36;"	d	file:
+BC_SYS_BUILD_CODE	src/ota.c	32;"	d	file:
+BC_SYS_SW_VERSION	src/ota.c	31;"	d	file:
+BC_SYS_UPGRADE	src/ota.c	29;"	d	file:
+Build	Makefile	/^define Build\/Compile$/;"	m
+Build	Makefile	/^define Build\/Prepare$/;"	m
+CHECK	src/ota.c	/^	CHECK,$/;"	e	enum:__anon2	file:
+CMD_SZ	src/ota.c	18;"	d	file:
+DBG_TAG	src/ota.c	39;"	d	file:
+DEBUG	src/dbg.h	4;"	d
+DOWNLOADBIN	src/ota.c	/^	DOWNLOADBIN,$/;"	e	enum:__anon2	file:
+DOWNLOADINFO	src/ota.c	/^	DOWNLOADINFO,$/;"	e	enum:__anon2	file:
+FAIL	src/ota.c	/^	FAIL,$/;"	e	enum:__anon2	file:
+IDLE	src/ota.c	/^	IDLE=0,$/;"	e	enum:__anon2	file:
+LATEST	src/ota.c	/^	LATEST,$/;"	e	enum:__anon2	file:
+MAX_STATE	src/ota.c	/^	MAX_STATE$/;"	e	enum:__anon2	file:
+MTD_WRITE_FAIL	src/ota.c	/^	MTD_WRITE_FAIL$/;"	e	enum:__anon1	file:
+MTD_WRITE_SUCCESS	src/ota.c	/^	MTD_WRITE_SUCCESS,$/;"	e	enum:__anon1	file:
+MTD_WRITE_WRITTING	src/ota.c	/^	MTD_WRITE_WRITTING,$/;"	e	enum:__anon1	file:
+OTA_BIN_FILE	src/ota.c	20;"	d	file:
+OTA_INFO_FILE	src/ota.c	19;"	d	file:
+PKG_NAME	Makefile	/^PKG_NAME:=ota$/;"	m
+PKG_RELEASE	Makefile	/^PKG_RELEASE:=1$/;"	m
+POLL_INTERVAL	src/ota.c	16;"	d	file:
+Package	Makefile	/^define Package\/ota$/;"	m
+Package	Makefile	/^define Package\/ota\/install$/;"	m
+SUCCESS	src/ota.c	/^	SUCCESS,$/;"	e	enum:__anon2	file:
+TAG_CODE	src/ota.c	25;"	d	file:
+TAG_DESC	src/ota.c	22;"	d	file:
+TAG_HWVER	src/ota.c	23;"	d	file:
+TAG_MD5	src/ota.c	27;"	d	file:
+TAG_SWVER	src/ota.c	24;"	d	file:
+TAG_URL	src/ota.c	26;"	d	file:
+WRITTING	src/ota.c	/^	WRITTING,$/;"	e	enum:__anon2	file:
+_DBG_H_	src/dbg.h	2;"	d
+_dbg	src/dbg.h	12;"	d
+_dbg	src/dbg.h	7;"	d
+_get_mtd_state	src/ota.c	/^static void _get_mtd_state (int *mtdstate, int *progress)$/;"	f	file:
+_trc	src/dbg.h	10;"	d
+_trc	src/dbg.h	13;"	d
+_update_state	src/ota.c	/^static void _update_state(char *logst, int progress)$/;"	f	file:
+check_process	src/ota.c	/^int check_process(char *procname)$/;"	f
+delimiter	src/uci.c	/^static const char *delimiter = " ";$/;"	v	file:
+getmd5	src/ota.c	/^int getmd5(char *filename, char *md5str)$/;"	f
+log_state	src/ota.c	/^char *log_state[8] =$/;"	v
+logfp	src/ota.c	/^FILE *logfp=NULL;$/;"	v
+main	src/ota.c	/^int main(int argc, char *argv[])$/;"	f
+show_config_entry	src/uci.c	/^int show_config_entry (char *path)$/;"	f
+start_mtd_write	src/ota.c	/^void start_mtd_write(void)$/;"	f
+uci_get	src/uci.c	/^char *uci_get (char *name)$/;"	f
+uci_show_value	src/uci.c	/^static void uci_show_value(struct uci_option *o)$/;"	f	file:
+usage	src/ota.c	/^char usage[] = 	"ota url\\n";$/;"	v

@@ -12,6 +12,16 @@ define Device/r9-dj300
 endef
 TARGET_DEVICES += r9-dj300
 
+# R9-DJ310
+define Device/r9-dj310
+  DTS := R9-DJ310
+  IMAGE_SIZE := $(ralink_default_fw_size_32M)
+  SUPPORTED_DEVICES := r9-dj310
+  DEVICE_TITLE := RAONIX Iot Hub DJ310
+  DEVICE_PACKAGES:= kmod-usb2 kmod-usb-ohci uboot-envtools
+endef
+TARGET_DEVICES += r9-dj310
+
 # R9-DJ270
 define Device/r9-dj270
   DTS := R9-DJ270
